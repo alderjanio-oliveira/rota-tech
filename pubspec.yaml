@@ -1,0 +1,33 @@
+name: app_tracking
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  fl_chart: ^1.1.0
+  pdf: ^3.10.8
+  printing: ^5.13.4
+  flutter:
+    sdk: flutter
+  flutter_map: ^8.2.2
+  get: ^4.7.2
+  get_storage: ^2.1.1
+  http: ^1.5.0
+  intl: ^0.20.2
+  latlong2: ^0.9.1
+  shared_preferences: ^2.5.4
+  web_socket_channel: ^3.0.3
+  flutter_local_notifications: ^19.5.0
+  url_launcher: ^6.3.2
+  flutter_secure_storage: ^10.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

@@ -53,9 +53,9 @@ class ClientsAdminController extends GetxController {
     final days = client.daysToExpire;
     late String message;
 
-    if (days > 5) {
+    if (days > 0) {
       message = messageServiceWhatsApp.buildMessage(client, ReminderType.before);
-    } else if (days >= 0) {
+    } else if (days == 0) {
       message = messageServiceWhatsApp.buildMessage(client, ReminderType.dueToday);
     } else {
       message = messageServiceWhatsApp.buildMessage(client, ReminderType.overdue);

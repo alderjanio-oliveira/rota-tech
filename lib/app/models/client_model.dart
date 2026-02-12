@@ -23,7 +23,9 @@ class ClientModel {
 
   int get daysToExpire {
     if (expiresAt == null) return 9999;
-    return expiresAt!.difference(DateTime.now()).inDays;
+
+    final diff = expiresAt!.difference(DateTime.now());
+    return (diff.inHours / 24).ceil();
   }
 }
 

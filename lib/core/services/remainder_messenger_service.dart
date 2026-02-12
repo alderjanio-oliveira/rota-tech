@@ -7,44 +7,49 @@ class ReminderMessageService {
   String buildMessage(ClientModel client, ReminderType type) {
     final start = client.expiresAt;
     final BillingConfig? config = billingConfigService.loadBillingConfig();
+    final pixType = pixKeyTypeLabel(config!.pixKeyType);
 
     switch (type) {
       case ReminderType.before:
         return '''
-          Olá, Sr(a). ${client.name} 👋
+      Olá, Sr(a). ${client.name} 👋
 
-          Este é um lembrete da mensalidade referente ao serviço da ${config?.companyName}.
+      Este é um lembrete da mensalidade referente ao serviço da ${config.companyName}.
 
-          📅 Vencimento: ${start?.day}/${DateTime.now().month}/${DateTime.now().year}
+      📅 Vencimento será no Próximo dia ${start?.day}
+      não deixe para última hora! 😉
 
-          💳 PIX (${config?.pixKeyType}): ${config?.pixKey}
+      💳 PIX ($pixType): 
+      ${config.pixKey}
 
-          Caso o pagamento já tenha sido realizado, por favor desconsidere.
-          Agradecemos a confiança 🙏
+      Caso o pagamento já tenha sido realizado, por favor desconsidere.
+      Agradecemos a confiança 🙏
        ''';
 
       case ReminderType.dueToday:
         return '''
-          Sr(a) ${client.name}
-          Hoje dia: ${start?.day} é o vencimento da sua mensalidade.
+      Sr(a) ${client.name}
+      Hoje dia: ${start?.day} é o vencimento da sua mensalidade.
 
-          💳 PIX (${config?.pixKeyType}): ${config?.pixKey}
-          Ficamos no aguardo.
-          Agradecemos a compreensão.
+      💳 PIX ($pixType):
+      ${config.pixKey}
+      Ficamos no aguardo.
+      Agradecemos a compreensão.
         ''';
 
       case ReminderType.overdue:
         return '''
-          Sr(a) ${client.name}
-          Sua mensalidade encontra-se em atraso.
-          Pedimos que regularize o quanto antes.
+      Sr(a) ${client.name}
+      Sua mensalidade encontra-se em atraso.
+      Pedimos que regularize o quanto antes.
 
-          📅 Vencimento: no ultimo dia: ${start?.day}
+      📅 Vencimento: no ultimo dia: ${start?.day}
 
-          💳 PIX (${config?.pixKeyType}): ${config?.pixKey}
+      💳 PIX ($pixType): 
+      ${config.pixKey}
 
-          caso o pagamento já tenha sido realizado, por favor desconsidere.
-          Agradecemos a compreensão.
+      caso o pagamento já tenha sido realizado, por favor desconsidere.
+      Agradecemos a compreensão.
         ''';
     }
   }
@@ -52,15 +57,30 @@ class ReminderMessageService {
   buildCongratulationMessage(ClientModel client) {
     final BillingConfig? config = billingConfigService.loadBillingConfig();
     return '''
-      Olá, Sr(a). ${client.name} 👋
+  Olá, Sr(a). ${client.name} 👋
 
-      Parabéns! 🎉 Seu contrato foi renovado com sucesso.
+  Parabéns! 🎉 Seu contrato foi renovado com sucesso.
 
-      Agradecemos a confiança depositada em nossos serviços.
-      Estamos à disposição para qualquer necessidade.
+  Agradecemos a confiança depositada em nossos serviços.
+  Estamos à disposição para qualquer necessidade.
 
-      Atenciosamente,
-      Equipe de ${config?.companyName}
+  Atenciosamente,
+  Equipe de ${config?.companyName}
     ''';
+  }
+
+  String pixKeyTypeLabel(PixKeyType type) {
+    switch (type) {
+      case PixKeyType.cpf:
+        return 'CPF';
+      case PixKeyType.cnpj:
+        return 'CNPJ';
+      case PixKeyType.email:
+        return 'E-mail';
+      case PixKeyType.phone:
+        return 'Telefone';
+      case PixKeyType.random:
+        return 'Chave Aleatória';
+    }
   }
 }

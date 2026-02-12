@@ -22,6 +22,7 @@ class HomePage extends GetView<HomeController> {
       appBar: AppBar(
         title: const Text('Dispositivos'),
         actions: [
+          IconButton(onPressed: () => Get.toNamed(Routes.MAP), icon: Icon(Icons.map)),
           IconButton(icon: const Icon(Icons.refresh), onPressed: controller.loadDevices),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],

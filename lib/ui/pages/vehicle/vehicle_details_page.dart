@@ -33,7 +33,7 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
             if (!controller.isLoading.value) ...controller.dailyKmList.map((item) => KmDayItem(item: item)),
             const SizedBox(height: 16),
             KmPerDayCard(km: controller.totalKm.value),
-            MapPage(deviceId: deviceId),
+            MapWidget(deviceId: deviceId),
           ],
         );
       }),

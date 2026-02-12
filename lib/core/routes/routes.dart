@@ -15,7 +15,7 @@ import 'package:get/get.dart';
 List<GetPage<dynamic>> mainRouters = <GetPage<dynamic>>[
   GetPage(name: Routes.LOGIN, page: () => LoginPage(), binding: AuthBindings()),
   GetPage(name: Routes.HOME, page: () => HomePage(), binding: HomeBinding()),
-  GetPage(name: Routes.MAP, page: () => MapPage(), binding: MapBinding()),
+  GetPage(name: Routes.MAP, page: () => MapWidget(), binding: MapBinding()),
   GetPage(
     name: Routes.VEHICLE_DETAILS,
     page: () => VehicleDetailsPage(deviceId: Get.arguments ?? ''),

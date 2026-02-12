@@ -10,9 +10,9 @@ class HomeBinding implements Bindings {
   @override
   void dependencies() {
     Get.lazyPut<NotificationService>(() => NotificationService());
-    Get.lazyPut<TraccarWebSocketService>(() => TraccarWebSocketService());
+    Get.lazyPut<TraccarWebSocketService>(() => TraccarWebSocketService(), fenix: true);
     Get.lazyPut<PositionEventHandler>(() => PositionEventHandler(Get.find<NotificationService>()));
-    Get.lazyPut<TraccarService>(() => TraccarService());
+    Get.lazyPut<TraccarService>(() => TraccarService(), fenix: true);
     Get.lazyPut<ReverseGeocodeService>(() => ReverseGeocodeService());
     Get.lazyPut<HomeController>(() => HomeController(traccarService: Get.find<TraccarService>(), geocodeService: Get.find<ReverseGeocodeService>()));
   }

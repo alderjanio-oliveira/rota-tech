@@ -2,11 +2,11 @@
 import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/ui/drawer/app_drawer.dart';
 import 'package:app_tracking/core/ui/drawer/scaffold/app_scaffold.dart';
-import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/atoms/button/primary.dart';
 import 'package:app_tracking/ui/controllers/auth_controller.dart';
 import 'package:app_tracking/ui/controllers/home_controller.dart';
 import 'package:app_tracking/ui/molecules/device_card/device_card.dart';
+import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
 import 'package:app_tracking/ui/pages/home/widgets/action_button.dart';
 import 'package:app_tracking/ui/pages/home/widgets/egine_action_modal.dart';
 import 'package:flutter/material.dart';
@@ -46,16 +46,16 @@ class HomePage extends GetView<HomeController> {
           );
         }
 
-        if (controller.devices.isEmpty) {
+        if (controller.vehicles.list.isEmpty) {
           return const Center(child: Text('Nenhum dispositivo encontrado'));
         }
 
         return Obx(
           () => ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: controller.devices.length,
+            itemCount: controller.vehicles.list.length,
             itemBuilder: (context, index) {
-              final device = controller.devices[index];
+              final device = controller.vehicles.list[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DeviceCard(
@@ -67,7 +67,12 @@ class HomePage extends GetView<HomeController> {
                   deviceName: device.name,
                   status: device.status,
                   lastUpdate: device.lastPositionId,
-                  onTap: () => _showDeviceDetails(device),
+                  onTap: () => GenericModalMolecule.show(
+                    context: context,
+                    title: 'Deseja ver os detalhes do veículo?',
+                    primaryMethod: () => Get.toNamed(Routes.VEHICLE_DETAILS, arguments: device),
+                    secondyMethod: () => Get.back(),
+                  ),
                   resetTrip: () {
                     GetStorage box = GetStorage();
                     // box.write(
@@ -91,7 +96,6 @@ class HomePage extends GetView<HomeController> {
                           );
                           return;
                         }
-
                         controller.sendCommand(device.id, lockState ? 'engineResume' : 'engineStop');
                       },
                     ),
@@ -102,33 +106,6 @@ class HomePage extends GetView<HomeController> {
           ),
         );
       }),
-    );
-  }
-
-  void _showDeviceDetails(DeviceModel device) {
-    Get.dialog(
-      AlertDialog(
-        title: Text(device.name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ID: ${device.id}'),
-            Text('Status: ${device.status}'),
-            if (device.lastPositionId != null) Text('Última atualização: ${device.lastPositionId}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-              Get.toNamed(Routes.VEHICLE_DETAILS, arguments: device.id);
-            },
-            child: const Text('Ver Detalhes'),
-          ),
-          TextButton(onPressed: () => Get.back(), child: const Text('Fechar')),
-        ],
-      ),
     );
   }
 

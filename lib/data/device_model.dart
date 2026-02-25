@@ -34,8 +34,9 @@ class DeviceAttributes {
   final bool? charge;
   final double? totalDistance;
   final String? address;
+  final Trip? trip;
 
-  DeviceAttributes({required this.ignition, this.lockState, this.charge, this.totalDistance, this.address});
+  DeviceAttributes({required this.ignition, this.lockState, this.charge, this.totalDistance, this.address, this.trip});
 
   factory DeviceAttributes.fromJson(Map<String, dynamic> json) {
     return DeviceAttributes(
@@ -44,16 +45,40 @@ class DeviceAttributes {
       charge: json['charge'],
       totalDistance: json['totalDistance']?.toDouble(),
       address: json['address'],
+      trip: json['trip'] != null ? Trip.fromJson(json['trip']) : null,
     );
   }
 
-  DeviceAttributes copyWith({bool? ignition, bool? lockState, bool? charge, double? totalDistance, String? address}) {
+  DeviceAttributes copyWith({bool? ignition, bool? lockState, bool? charge, double? totalDistance, String? address, Trip? trip}) {
     return DeviceAttributes(
       ignition: ignition ?? this.ignition,
       lockState: lockState ?? this.lockState,
       charge: charge ?? this.charge,
       totalDistance: totalDistance ?? this.totalDistance,
       address: address ?? this.address,
+      trip: trip ?? this.trip,
     );
+  }
+}
+
+class Trip {
+  final String name;
+  final double offset;
+  final double? target;
+  final bool active;
+
+  Trip({required this.name, required this.offset, this.target, this.active = true});
+
+  factory Trip.fromJson(Map<String, dynamic> json) {
+    return Trip(
+      name: json['name'],
+      offset: json['offset']?.toDouble() ?? 0.0,
+      target: json['target']?.toDouble() ?? 0.0,
+      active: json['active'] ?? true,
+    );
+  }
+
+  Trip copyWith({String? name, double? offset, double? target, bool? active}) {
+    return Trip(name: name ?? this.name, offset: offset ?? this.offset, target: target ?? this.target, active: active ?? this.active);
   }
 }

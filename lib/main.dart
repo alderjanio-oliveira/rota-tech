@@ -16,7 +16,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   final TraccarService traccarService = TraccarService();
 
-  MyApp({Key? key}) : super(key: key);
+  MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +28,7 @@ class MyApp extends StatelessWidget {
         future: _checkAuth(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
           return snapshot.data == true ? HomePage() : LoginPage();
         },

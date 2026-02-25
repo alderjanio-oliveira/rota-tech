@@ -27,7 +27,6 @@ class _MapWidgetState extends State<MapWidget> {
     controller.init(deviceId: widget.deviceId);
 
     controller.onPositionUpdated = (position) {
-      // 🔥 Só acompanha automaticamente se for 1 device
       if (controller.devices.length == 1) {
         mapController.move(position, mapController.camera.zoom);
       }
@@ -47,28 +46,49 @@ class _MapWidgetState extends State<MapWidget> {
             userAgentPackageName: 'com.example.app_tracking',
           ),
 
-          // 🔥 MARKERS REATIVOS
+          // =========================
+          // 🔵 TRILHAS
+          // =========================
           Obx(() {
-            if (controller.devices.isEmpty) {
+            if (controller.trails.isEmpty) {
               return const SizedBox();
             }
 
-            // zoom inicial apenas quando devices chegar
+            return PolylineLayer(
+              polylines: controller.trails.entries.where((entry) => entry.value.isNotEmpty).map((entry) {
+                return Polyline(points: entry.value, strokeWidth: 4, color: Colors.blueAccent);
+              }).toList(),
+            );
+          }),
+
+          // =========================
+          // 🚗 MARKERS
+          // =========================
+          Obx(() {
+            final validDevices = controller.devices.where((d) => d.latitude != 0 && d.longitude != 0).toList();
+
+            if (validDevices.isEmpty) {
+              return const SizedBox();
+            }
+
+            // 🔥 ZOOM APENAS UMA VEZ
             if (!_initialCameraSet) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                _setInitialZoom();
+                _setInitialZoom(validDevices);
               });
-
               _initialCameraSet = true;
             }
 
             return MarkerLayer(
-              markers: controller.devices.map((d) {
+              markers: validDevices.map((d) {
                 return Marker(
                   width: 60,
                   height: 60,
                   point: LatLng(d.latitude, d.longitude),
-                  child: Icon(Icons.add_location_rounded, size: 40, color: d.ignition ? Colors.green : Colors.grey),
+                  child: Transform.rotate(
+                    angle: d.heading * (pi / 180),
+                    child: Icon(Icons.motorcycle, size: 40, color: d.ignition ? Colors.green : Colors.grey),
+                  ),
                 );
               }).toList(),
             );
@@ -79,86 +99,23 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   // ===============================
-  // ZOOM INICIAL (UMA VEZ)
+  // 🎯 ZOOM INICIAL SEGURO
   // ===============================
-  void _setInitialZoom() {
-    final devices = controller.devices;
+  void _setInitialZoom(List validDevices) {
+    if (validDevices.isEmpty) return;
 
-    if (devices.length == 1) {
-      final d = devices.first;
+    if (validDevices.length == 1) {
+      final d = validDevices.first;
 
       mapController.move(LatLng(d.latitude, d.longitude), 17);
     } else {
-      final bounds = LatLngBounds.fromPoints(devices.map((d) => LatLng(d.latitude, d.longitude)).toList());
+      final points = validDevices.map((d) => LatLng(d.latitude, d.longitude)).toList();
+
+      if (points.isEmpty) return;
+
+      final bounds = LatLngBounds.fromPoints(points);
 
       mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)));
     }
   }
 }
-//   @override
-//   Widget build(BuildContext context) {
-//     return Obx(() {
-//       if (controller.loading.value) {
-//         return const Center(child: CircularProgressIndicator());
-//       }
-
-//       if (controller.devices.isEmpty) {
-//         return const Center(child: Text("Nenhuma posição encontrada"));
-//       }
-
-//       // 🔥 ZOOM APENAS UMA VEZ
-//       if (!_initialCameraSet) {
-//         WidgetsBinding.instance.addPostFrameCallback((_) {
-//           _setInitialZoom();
-//         });
-
-//         _initialCameraSet = true;
-//       }
-
-//       return SizedBox(
-//         height: widget.height,
-//         child: FlutterMap(
-//           mapController: mapController,
-//           options: const MapOptions(),
-//           children: [
-//             TileLayer(
-//               urlTemplate: 'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=xvu6cMMOUoNcxzaLO3IE',
-//               userAgentPackageName: 'com.example.app_tracking',
-//             ),
-
-//             MarkerLayer(
-//               markers: controller.devices.map((d) {
-//                 return Marker(
-//                   width: 60,
-//                   height: 60,
-//                   point: LatLng(d.latitude, d.longitude),
-//                   child: Transform.rotate(
-//                     angle: d.heading * (pi / 180),
-//                     child: Icon(Icons.motorcycle, size: 40, color: d.ignition ? Colors.green : Colors.grey),
-//                   ),
-//                 );
-//               }).toList(),
-//             ),
-//           ],
-//         ),
-//       );
-//     });
-//   }
-
-//   // ===============================
-//   // ZOOM INICIAL (UMA VEZ)
-//   // ===============================
-//   void _setInitialZoom() {
-//     final devices = controller.devices;
-
-//     if (devices.length == 1) {
-//       final d = devices.first;
-
-//       mapController.move(LatLng(d.latitude, d.longitude), 17);
-//     } else {
-//       final bounds = LatLngBounds.fromPoints(devices.map((d) => LatLng(d.latitude, d.longitude)).toList());
-
-//       mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)));
-//     }
-//   }
-// }

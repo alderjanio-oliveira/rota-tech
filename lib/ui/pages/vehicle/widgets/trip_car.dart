@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 
 class TripCard extends StatelessWidget {
   final String label;
-  final double valueKm;
+  final String? valueKm;
   final VoidCallback onReset;
+  final TextEditingController target;
 
   const TripCard({
     super.key,
     required this.label,
     required this.valueKm,
     required this.onReset,
+    required this.target,
   });
 
   @override
@@ -17,23 +19,35 @@ class TripCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(label, style: const TextStyle(fontSize: 16)),
-                Text(
-                  "${valueKm.toStringAsFixed(2)} km",
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "${valueKm ?? ' - '} km",
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                ),
+                OutlinedButton(
+                  onPressed: onReset,
+                  child: const Text("Zerar"),
                 ),
               ],
             ),
-            ElevatedButton(onPressed: onReset, child: const Text("Reset")),
+            ListTile(
+              contentPadding: EdgeInsets.all(0),
+              horizontalTitleGap: 0,
+              leading: Icon(Icons.warning_sharp, color: Colors.orange),
+              title: Text('você será notificado em ${target.text} kms'),
+            ),
           ],
         ),
       ),

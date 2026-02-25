@@ -1,5 +1,4 @@
 import 'package:app_tracking/core/routes/app_routes.dart';
-import 'package:app_tracking/ui/pages/billing/billing_config_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
@@ -23,7 +22,11 @@ class AppDrawer extends StatelessWidget {
             Obx(() {
               if (!session.isAdmin.value) return const SizedBox.shrink();
 
-              return _drawerItem(icon: Icons.people_alt_rounded, title: 'Clientes / Mensalidades', onTap: () => Get.toNamed(Routes.CLIENTS));
+              return _drawerItem(
+                icon: Icons.people_alt_rounded,
+                title: 'Clientes / Mensalidades',
+                onTap: () => Get.toNamed(Routes.CLIENTS),
+              );
             }),
 
             Obx(() {

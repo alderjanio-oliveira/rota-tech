@@ -21,7 +21,7 @@ class BillingConfigPage extends GetView<BillingConfigController> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<PixKeyType>(
-              value: controller.pixKeyType.value,
+              initialValue: controller.pixKeyType.value,
               items: PixKeyType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name.toUpperCase()))).toList(),
               onChanged: (v) => controller.pixKeyType.value = v!,
               decoration: const InputDecoration(labelText: 'Tipo de chave PIX'),

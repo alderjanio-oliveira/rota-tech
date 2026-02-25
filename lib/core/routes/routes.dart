@@ -18,7 +18,7 @@ List<GetPage<dynamic>> mainRouters = <GetPage<dynamic>>[
   GetPage(name: Routes.MAP, page: () => MapWidget(), binding: MapBinding()),
   GetPage(
     name: Routes.VEHICLE_DETAILS,
-    page: () => VehicleDetailsPage(deviceId: Get.arguments ?? ''),
+    page: () => VehicleDetailsPage(device: Get.arguments ?? ''),
     binding: VehicleDetailsBindings(),
   ),
   GetPage(name: Routes.CLIENTS, page: () => const ClientsAdminPage()),

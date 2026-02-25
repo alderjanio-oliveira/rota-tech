@@ -50,6 +50,7 @@ class DeviceCard extends StatelessWidget {
         children: [
           if (charge == false) const Icon(Icons.battery_alert, color: Colors.red),
           const SizedBox(width: 8),
+          IconButton(onPressed: onTap, icon: Icon(Icons.remove_red_eye_sharp)),
           Expanded(
             flex: 3,
             child: Column(

@@ -5,23 +5,23 @@ import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
 import 'package:app_tracking/data/device_model.dart';
+import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
   final TraccarService traccarService;
   final ReverseGeocodeService geocodeService;
+  final VehicleState vehicles;
 
   late final TraccarWebSocketService socketService;
   late final PositionEventHandler eventHandler;
-
-  final RxList<DeviceModel> devices = <DeviceModel>[].obs;
 
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
   Timer? _timer;
 
-  HomeController({required this.traccarService, required this.geocodeService});
+  HomeController({required this.traccarService, required this.geocodeService, required this.vehicles});
 
   @override
   void onInit() async {
@@ -46,7 +46,11 @@ class HomeController extends GetxController {
   void _connectSocket() {
     if (socketService.isConnected) return;
 
-    socketService.connect(sessionId: traccarService.jsessionId!, onData: _onSocketData, onError: (e) => print('WS erro: $e'));
+    socketService.connect(
+      sessionId: traccarService.jsessionId!,
+      onData: _onSocketData,
+      onError: (e) => print('WS erro: $e'),
+    );
   }
 
   void _onSocketData(Map<String, dynamic> data) {
@@ -55,21 +59,11 @@ class HomeController extends GetxController {
 
     for (final pos in positions) {
       final deviceId = pos['deviceId'];
+      final index = vehicles.list.indexWhere((d) => d.id == deviceId);
+      if (index == -1) continue;
       final attrs = pos['attributes'] ?? {};
 
-      final index = devices.indexWhere((d) => d.id == deviceId);
-      if (index == -1) continue;
-
-      final device = devices[index];
-
-      final updatedAttributes = device.attributes.copyWith(
-        ignition: attrs['ignition'] ?? attrs['motion'],
-        lockState: attrs['blocked'] ?? device.attributes.lockState,
-        charge: attrs['charge'] ?? device.attributes.charge,
-        totalDistance: attrs['totalDistance']?.toDouble() ?? device.attributes.totalDistance,
-      );
-
-      devices[index] = device.copyWith(attributes: updatedAttributes);
+      vehicles.updateDevices(index, attrs);
 
       eventHandler.handle(deviceId, attrs);
     }
@@ -94,10 +88,10 @@ class HomeController extends GetxController {
       errorMessage.value = '';
 
       final list = await traccarService.getDevices();
-      devices.assignAll(list.map<DeviceModel>((e) => DeviceModel.fromJson(e as Map<String, dynamic>)));
+      vehicles.list.assignAll(list.map<DeviceModel>((e) => DeviceModel.fromJson(e as Map<String, dynamic>)));
 
       await refreshStatus();
-    } catch (_) {
+    } catch (e) {
       errorMessage.value = 'Erro ao carregar dispositivos';
     } finally {
       isLoading.value = false;
@@ -113,8 +107,8 @@ class HomeController extends GetxController {
     try {
       final positions = await traccarService.getLastPositions();
 
-      for (var i = 0; i < devices.length; i++) {
-        final device = devices[i];
+      for (var i = 0; i < vehicles.list.length; i++) {
+        final device = vehicles.list[i];
         final position = positions[device.id];
         if (position == null) continue;
 
@@ -130,10 +124,10 @@ class HomeController extends GetxController {
           lastPositionId: position['id'],
         );
 
-        devices[i] = updatedDevice;
+        vehicles.list[i] = updatedDevice;
       }
       isLoading.value = false;
-      await loadAddresses(devices, positions);
+      await loadAddresses(vehicles.list, positions);
       print('refresh done');
     } catch (e) {
       print(e);
@@ -159,7 +153,7 @@ class HomeController extends GetxController {
 
       devicesList[i] = device.copyWith(attributes: device.attributes.copyWith(address: address));
     }
-    devices.refresh();
+    vehicles.list.refresh();
   }
 
   // =======================

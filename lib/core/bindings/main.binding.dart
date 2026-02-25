@@ -1,7 +1,6 @@
 import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/ui/controllers/auth_controller.dart';
-import 'package:app_tracking/ui/controllers/device_controller.dart';
 import 'package:get/get.dart';
 
 class MainBinding implements Bindings {
@@ -10,6 +9,5 @@ class MainBinding implements Bindings {
     Get.lazyPut<UserSessionService>(() => UserSessionService(), fenix: true);
     Get.lazyPut<TraccarService>(() => TraccarService());
     Get.lazyPut(() => AuthController(Get.find<TraccarService>()));
-    Get.lazyPut(() => DeviceController(Get.find<TraccarService>()));
   }
 }

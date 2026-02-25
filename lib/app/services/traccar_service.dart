@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
+import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/models/daily_distance.dart';
 import 'package:app_tracking/ui/models/daily_km_model.dart';
 import 'package:get/get.dart';
@@ -54,6 +55,12 @@ class TraccarService extends GetxService {
     final response = await http.get(url, headers: _buildHeaders());
 
     if (response.statusCode == 200) {
+      try {
+        json.decode(response.body);
+      } catch (e) {
+        throw Exception('Resposta inesperada ao buscar dispositivos: ${response.body}');
+      }
+      print(json.decode(response.body));
       return json.decode(response.body);
     } else {
       throw Exception('Failed to load devices: ${response.statusCode}');
@@ -111,7 +118,11 @@ class TraccarService extends GetxService {
   generateCommand(int deviceId, String command) async {
     final url = Uri.parse('$baseUrl/commands');
 
-    final response = await http.post(url, headers: _buildHeaders(), body: json.encode({'deviceId': deviceId, 'type': command, 'description': ''}));
+    final response = await http.post(
+      url,
+      headers: _buildHeaders(),
+      body: json.encode({'deviceId': deviceId, 'type': command, 'description': ''}),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -129,7 +140,11 @@ class TraccarService extends GetxService {
     // 2) enviar
     final sendUrl = Uri.parse('$baseUrl/commands/send');
 
-    final sendResponse = await http.post(sendUrl, headers: _buildHeaders(), body: json.encode({'id': commandData['id'], 'deviceId': deviceId}));
+    final sendResponse = await http.post(
+      sendUrl,
+      headers: _buildHeaders(),
+      body: json.encode({'id': commandData['id'], 'deviceId': deviceId}),
+    );
 
     print("SEND: ${sendResponse.statusCode} -> ${sendResponse.body}");
 
@@ -275,6 +290,44 @@ class TraccarService extends GetxService {
         'expirationTime': newExpireDate.toIso8601String(),
         'attributes': {'expiresAt': newExpireDate.toIso8601String(), 'notified': false},
       }),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  Future<bool> updateDeviceTrip({
+    required DeviceModel device,
+    required String tripKey, // "tripA" ou "tripB"
+    required double offset,
+    double? target,
+    bool active = true,
+  }) async {
+    final getUrl = Uri.parse('$baseUrl/devices/${device.id}');
+
+    // 1️⃣ Buscar device atual
+    final getResponse = await http.get(getUrl, headers: _buildHeaders());
+
+    if (getResponse.statusCode != 200) return false;
+
+    final deviceData = json.decode(getResponse.body);
+
+    Map<String, dynamic> attributes = Map<String, dynamic>.from(deviceData['attributes'] ?? {});
+
+    // 2️⃣ Garantir estrutura trips
+    Map<String, dynamic> trips = Map<String, dynamic>.from(attributes['trip'] ?? {});
+
+    // 3️⃣ Atualizar trip específica
+    trips = {'offset': offset, 'target': target, 'active': active, 'name': tripKey};
+
+    attributes['trip'] = trips;
+
+    // 4️⃣ Enviar update
+    final putUrl = Uri.parse('$baseUrl/devices/${device.id}');
+
+    final response = await http.put(
+      putUrl,
+      headers: _buildHeaders(),
+      body: json.encode({'id': deviceData['id'], 'name': deviceData['name'], 'uniqueId': deviceData['uniqueId'], 'attributes': attributes}),
     );
 
     return response.statusCode == 200;

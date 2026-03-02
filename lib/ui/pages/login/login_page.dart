@@ -8,9 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class LoginPage extends StatelessWidget {
+  final String? notificationPayload;
   final AuthController authController = Get.find();
 
-  LoginPage({super.key});
+  LoginPage({super.key, this.notificationPayload});
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +69,7 @@ class LoginPage extends StatelessWidget {
     final success = await authController.login(authController.emailController.text.trim(), authController.passwordController.text);
 
     if (success) {
+      if (notificationPayload != null) return Get.offAllNamed(Routes.TRIP_DETAILS, arguments: notificationPayload);
       Get.offAllNamed(Routes.HOME);
     }
   }

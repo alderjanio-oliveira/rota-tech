@@ -87,7 +87,7 @@ class _MapWidgetState extends State<MapWidget> {
                   point: LatLng(d.latitude, d.longitude),
                   child: Transform.rotate(
                     angle: d.heading * (pi / 180),
-                    child: Icon(Icons.motorcycle, size: 40, color: d.ignition ? Colors.green : Colors.grey),
+                    child: Icon(Icons.adjust_rounded, size: 40, color: d.ignition ? Colors.green : Colors.grey),
                   ),
                 );
               }).toList(),

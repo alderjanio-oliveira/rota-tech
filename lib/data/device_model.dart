@@ -5,7 +5,13 @@ class DeviceModel {
   final DeviceAttributes attributes;
   final int? lastPositionId;
 
-  DeviceModel({required this.id, required this.name, required this.status, required this.attributes, this.lastPositionId});
+  DeviceModel({
+    required this.id,
+    required this.name,
+    required this.status,
+    required this.attributes,
+    this.lastPositionId,
+  });
 
   factory DeviceModel.fromJson(Map<String, dynamic> json) {
     return DeviceModel(
@@ -25,6 +31,29 @@ class DeviceModel {
       attributes: attributes ?? this.attributes,
       lastPositionId: lastPositionId ?? this.lastPositionId,
     );
+  }
+
+  /// 🚗 Odometro em KM
+  double? get odometerKm {
+    if (attributes.totalDistance == null) return null;
+    return attributes.totalDistance! / 1000;
+  }
+
+  /// 🅰️ Trip atual baseado no offset
+  double? get tripKm {
+    if (attributes.trip == null || attributes.totalDistance == null) return null;
+
+    return (attributes.totalDistance! - attributes.trip!.offset) / 1000;
+  }
+
+  /// 🎯 Verifica se atingiu meta
+  bool get tripReachedTarget {
+    final km = tripKm;
+    final target = attributes.trip?.target;
+
+    if (km == null || target == null) return false;
+
+    return km >= (target - (target * 0.05)); // Considera atingido se estiver dentro de 5% da meta
   }
 }
 

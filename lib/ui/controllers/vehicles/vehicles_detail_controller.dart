@@ -38,7 +38,12 @@ class VehicleDetailsController extends GetxController {
   }
 
   Future<DateTime?> _pickDate() async {
-    return await showDatePicker(context: Get.context!, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now());
+    return await showDatePicker(
+      context: Get.context!,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
   }
 
   Future<void> searchKmByPeriod() async {
@@ -58,9 +63,6 @@ class VehicleDetailsController extends GetxController {
       return 0.0;
     }
     var tripCaulated = (device.attributes.totalDistance! - device.attributes.trip!.offset) / 1000;
-    print('totalDistance: ${device.attributes.totalDistance}');
-    print('totalDistance: ${device.attributes.trip!.offset}');
-    print('totalDistance: ${device.attributes.trip!}');
 
     return tripCaulated;
   }

@@ -38,6 +38,7 @@ class AppDrawer extends StatelessWidget {
                 onTap: () => Get.toNamed(Routes.BILLING_CONFIG),
               );
             }),
+            _drawerItem(icon: Icons.trip_origin, title: 'Kms rodados', onTap: () => Get.toNamed(Routes.TRIP_DETAILS)),
 
             const Spacer(),
 

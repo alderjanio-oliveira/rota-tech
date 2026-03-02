@@ -1,8 +1,10 @@
 // lib/ui/controllers/auth_controller.dart
 import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/services/auth_storage_service.dart';
+import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:workmanager/workmanager.dart';
 
 class AuthController extends GetxController {
   final TraccarService traccarService;
@@ -22,6 +24,16 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    Workmanager().registerOneOffTask(
+      Constants.taskTripAlert,
+      Constants.taskTripAlert,
+      initialDelay: Duration(seconds: 20), // Aguarda 10 segundos para garantir que o app esteja totalmente inicializado
+    );
+    // Workmanager().registerPeriodicTask(
+    //   Constants.taskTripAlert,
+    //   Constants.taskTripAlert,
+    //   frequency: Duration(minutes: 30), // O Workmanager aceita o tempo minimo de 15 min.
+    // );
     _loadRememberedCredentials();
   }
 

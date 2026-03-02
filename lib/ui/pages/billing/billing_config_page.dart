@@ -32,6 +32,13 @@ class BillingConfigPage extends GetView<BillingConfigController> {
               onChanged: (v) => controller.pixKey.value = v,
               controller: TextEditingController(text: controller.pixKey.value),
             ),
+            TextField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Valor'),
+              onChanged: (v) => controller.price.value = double.tryParse(v) ?? 0.0,
+              controller: TextEditingController(text: controller.price.value.toString()),
+            ),
+
             const SizedBox(height: 24),
             ElevatedButton(onPressed: controller.save, child: const Text('Salvar')),
           ],

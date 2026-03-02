@@ -13,22 +13,26 @@ class HomeController extends GetxController {
   final ReverseGeocodeService geocodeService;
   final VehicleState vehicles;
 
-  late final TraccarWebSocketService socketService;
-  late final PositionEventHandler eventHandler;
+  final TraccarWebSocketService socketService;
+  final PositionEventHandler eventHandler;
 
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
   Timer? _timer;
 
-  HomeController({required this.traccarService, required this.geocodeService, required this.vehicles});
+  HomeController({
+    required this.traccarService,
+    required this.geocodeService,
+    required this.vehicles,
+    required this.socketService,
+    required this.eventHandler,
+  });
 
   @override
   void onInit() async {
     super.onInit();
     await _init();
-    socketService = Get.find();
-    eventHandler = Get.find();
     _connectSocket();
   }
 
@@ -63,9 +67,9 @@ class HomeController extends GetxController {
       if (index == -1) continue;
       final attrs = pos['attributes'] ?? {};
 
-      vehicles.updateDevices(index, attrs);
-
+      vehicles.deviceUpdate(index, attrs);
       eventHandler.handle(deviceId, attrs);
+      vehicles.list.refresh();
     }
   }
 
@@ -107,25 +111,7 @@ class HomeController extends GetxController {
     try {
       final positions = await traccarService.getLastPositions();
 
-      for (var i = 0; i < vehicles.list.length; i++) {
-        final device = vehicles.list[i];
-        final position = positions[device.id];
-        if (position == null) continue;
-
-        final attrs = position['attributes'] ?? {};
-
-        var updatedDevice = device.copyWith(
-          attributes: device.attributes.copyWith(
-            ignition: attrs['ignition'] ?? attrs['motion'],
-            lockState: attrs['blocked'] ?? device.attributes.lockState,
-            charge: attrs['charge'] ?? device.attributes.charge,
-            totalDistance: attrs['totalDistance']?.toDouble() ?? device.attributes.totalDistance,
-          ),
-          lastPositionId: position['id'],
-        );
-
-        vehicles.list[i] = updatedDevice;
-      }
+      vehicles.positionsInfo(positions);
       isLoading.value = false;
       await loadAddresses(vehicles.list, positions);
       print('refresh done');

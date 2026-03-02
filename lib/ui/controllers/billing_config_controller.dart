@@ -10,6 +10,7 @@ class BillingConfigController extends GetxController {
   final companyName = ''.obs;
   final pixKey = ''.obs;
   final pixKeyType = PixKeyType.cpf.obs;
+  final price = 0.0.obs;
 
   @override
   void onInit() {
@@ -23,7 +24,9 @@ class BillingConfigController extends GetxController {
   }
 
   void save() {
-    service.saveBillingConfig(BillingConfig(companyName: companyName.value, pixKey: pixKey.value, pixKeyType: pixKeyType.value));
+    service.saveBillingConfig(
+      BillingConfig(companyName: companyName.value, pixKey: pixKey.value, pixKeyType: pixKeyType.value, price: price.value),
+    );
     Get.snackbar('Sucesso', 'Configurações salvas');
   }
 }

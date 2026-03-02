@@ -18,6 +18,8 @@ class ReminderMessageService {
 
       📅 Vencimento será no Próximo dia ${start?.day}
       não deixe para última hora! 😉
+      lembrando que o valor promocional é de R\$ ${config.price.toStringAsFixed(2)} 
+      APENAS ATÉ O VENCIMENTO!
 
       💳 PIX ($pixType): 
       ${config.pixKey}
@@ -33,6 +35,7 @@ class ReminderMessageService {
 
       💳 PIX ($pixType):
       ${config.pixKey}
+      Valor promocional de R\$ ${config.price.toStringAsFixed(2)} válido somente até o final do dia de hoje!
       Ficamos no aguardo.
       Agradecemos a compreensão.
         ''';

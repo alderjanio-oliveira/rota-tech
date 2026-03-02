@@ -6,7 +6,7 @@ class VehicleState {
   final RxList<DeviceModel> list = <DeviceModel>[].obs;
   final RxList<DevicePosition> positions = <DevicePosition>[].obs;
 
-  void updateDevices(int index, Map<String, dynamic> attrs) {
+  void deviceUpdate(int index, Map<String, dynamic> attrs) {
     final device = list[index];
 
     final updatedAttributes = device.attributes.copyWith(
@@ -17,5 +17,26 @@ class VehicleState {
     );
 
     list[index] = device.copyWith(attributes: updatedAttributes);
+  }
+
+  void positionsInfo(positions) {
+    for (var i = 0; i < list.length; i++) {
+      final device = list[i];
+      final position = positions[device.id];
+      if (position == null) continue;
+
+      final attrs = position['attributes'] ?? {};
+
+      var updatedDevice = device.copyWith(
+        attributes: device.attributes.copyWith(
+          ignition: attrs['ignition'] ?? attrs['motion'],
+          lockState: attrs['blocked'] ?? device.attributes.lockState,
+          charge: attrs['charge'] ?? device.attributes.charge,
+          totalDistance: attrs['totalDistance']?.toDouble() ?? device.attributes.totalDistance,
+        ),
+        lastPositionId: position['id'],
+      );
+      list[i] = updatedDevice;
+    }
   }
 }

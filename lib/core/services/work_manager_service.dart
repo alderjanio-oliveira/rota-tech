@@ -26,6 +26,15 @@ void callbackDispatcher() {
       vehicleState.positionsInfo(positions);
       String allDevicesInfo = '';
       for (final device in vehicleState.list) {
+        if (device.attributes.charge != null && !device.attributes.charge!) {
+          final notificationService = NotificationService();
+          await notificationService.show(
+            title: "Bateria desconectada 🔌",
+            body: "Veículo ${device.name} teve a bateria desconectada.",
+            id: device.id,
+            payload: allDevicesInfo,
+          );
+        }
         if (device.attributes.trip == null || device.attributes.totalDistance == null) continue;
         if (device.tripKm == null) continue;
         if (device.tripReachedTarget) allDevicesInfo += 'Veículo ${device.name} atingiu ${device.tripKm!.toStringAsFixed(2)} KM.\n';

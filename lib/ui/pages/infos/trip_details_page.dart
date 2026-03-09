@@ -1,5 +1,4 @@
 import 'package:app_tracking/core/ui/drawer/scaffold/app_scaffold.dart';
-import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/ui/pages/infos/molecule/trip_item_molecule.dart';
 import 'package:flutter/material.dart';
@@ -11,8 +10,6 @@ class TripDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final data = Get.arguments;
-
     return AppScaffold(
       appBar: AppBar(title: Text("Detalhes do Trip")),
       body: Padding(

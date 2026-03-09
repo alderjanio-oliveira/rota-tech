@@ -23,11 +23,11 @@ void main() async {
   await Workmanager().registerPeriodicTask(
     Constants.taskTripAlert, // uniqueName
     Constants.taskTripAlert, // taskName
-    frequency: Duration(minutes: 30),
+    frequency: Duration(minutes: 15),
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
-
   final launchDetails = await notificationService.getLaunchDetails();
+  await notificationService.requestPermission();
 
   runApp(
     MyApp(

@@ -6,6 +6,11 @@ class VehicleState {
   final RxList<DeviceModel> list = <DeviceModel>[].obs;
   final RxList<DevicePosition> positions = <DevicePosition>[].obs;
 
+  onInit() {
+    ever(list, (_) => print("Devices updated: ${list.length} devices"));
+    ever(positions, (_) => print("Positions updated: ${positions.length} positions"));
+  }
+
   void deviceUpdate(int index, Map<String, dynamic> attrs) {
     final device = list[index];
 

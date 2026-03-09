@@ -1,4 +1,5 @@
 import 'package:app_tracking/core/services/notification_service.dart';
+import 'package:app_tracking/data/device_model.dart';
 
 class PositionEventHandler {
   final NotificationService notificationService;
@@ -8,19 +9,19 @@ class PositionEventHandler {
   final Map<int, bool> _lastIgnition = {};
   final Map<int, bool> _lastPower = {};
 
-  void handle(int deviceId, Map<String, dynamic> attributes) {
-    _handleIgnition(deviceId, attributes);
+  void handle(int deviceId, Map<String, dynamic> attributes, DeviceModel device) {
+    _handleIgnition(deviceId, attributes, device);
     _handlePower(deviceId, attributes);
   }
 
-  void _handleIgnition(int deviceId, Map<String, dynamic> attr) {
+  void _handleIgnition(int deviceId, Map<String, dynamic> attr, DeviceModel device) {
     final ignition = attr['ignition'];
     if (ignition == null) return;
 
     final last = _lastIgnition[deviceId];
 
     if (last != null && last != ignition) {
-      notificationService.show(id: deviceId * 10, title: 'Ignição', body: ignition ? 'Ignição ligada' : 'Ignição desligada');
+      notificationService.show(id: deviceId * 10, title: device.name, body: ignition ? 'Ignição ligada' : 'Ignição desligada');
     }
 
     _lastIgnition[deviceId] = ignition;

@@ -67,8 +67,10 @@ class HomeController extends GetxController {
       if (index == -1) continue;
       final attrs = pos['attributes'] ?? {};
 
+      if (vehicles.list[index].attributes.ignition != attrs['ignition']) {
+        eventHandler.handle(deviceId, attrs, vehicles.list[index]);
+      }
       vehicles.deviceUpdate(index, attrs);
-      eventHandler.handle(deviceId, attrs);
       vehicles.list.refresh();
     }
   }

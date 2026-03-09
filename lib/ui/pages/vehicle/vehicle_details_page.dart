@@ -9,7 +9,6 @@ import 'package:app_tracking/ui/pages/vehicle/widgets/km_per_day_card.dart';
 import 'package:app_tracking/ui/pages/vehicle/widgets/trip_car.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/state_manager.dart';
 
 class VehicleDetailsPage extends GetView<VehicleDetailsController> {
   final DeviceModel device;

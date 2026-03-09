@@ -43,7 +43,9 @@ class ClientsAdminPage extends StatelessWidget {
                 leading: CircleAvatar(backgroundColor: _statusColor(days), child: Text(days.toString())),
                 title: Text(client.name),
                 subtitle: Text(
-                  client.expiresAt != null ? 'Vence em: ${client.expiresAt!.toLocal().toString().split(' ').first}' : 'Sem data de vencimento',
+                  client.expiresAt != null
+                      ? 'Vence em: ${client.expiresAt!.toLocal().toString().split(' ').first}'
+                      : 'Sem data de vencimento',
                 ),
                 trailing: Wrap(
                   spacing: 4,

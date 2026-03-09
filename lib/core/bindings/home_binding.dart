@@ -10,7 +10,6 @@ import 'package:get/get.dart';
 class HomeBinding implements Bindings {
   @override
   void dependencies() {
-    Get.put(VehicleState(), permanent: true);
     Get.lazyPut<NotificationService>(() => NotificationService());
     Get.lazyPut<TraccarWebSocketService>(() => TraccarWebSocketService(), fenix: true);
     Get.lazyPut<PositionEventHandler>(() => PositionEventHandler(Get.find<NotificationService>()));

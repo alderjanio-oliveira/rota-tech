@@ -20,6 +20,7 @@ class BillingConfigController extends GetxController {
       companyName.value = config.companyName;
       pixKey.value = config.pixKey;
       pixKeyType.value = config.pixKeyType;
+      price.value = config.price;
     }
   }
 

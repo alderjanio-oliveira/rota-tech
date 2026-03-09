@@ -55,6 +55,12 @@ class NotificationService {
     await _plugin.show(id, title, body, details, payload: payload);
   }
 
+  Future<void> requestPermission() async {
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidPlugin?.requestNotificationsPermission();
+  }
+
   Future<NotificationAppLaunchDetails?> getLaunchDetails() async {
     return await _plugin.getNotificationAppLaunchDetails();
   }

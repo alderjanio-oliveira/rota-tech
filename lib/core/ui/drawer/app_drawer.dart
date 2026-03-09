@@ -39,6 +39,7 @@ class AppDrawer extends StatelessWidget {
               );
             }),
             _drawerItem(icon: Icons.trip_origin, title: 'Kms rodados', onTap: () => Get.toNamed(Routes.TRIP_DETAILS)),
+            _drawerItem(icon: Icons.settings, title: 'Notificações', onTap: () => Get.toNamed(Routes.NOTIFICATION_CONFIG)),
 
             const Spacer(),
 

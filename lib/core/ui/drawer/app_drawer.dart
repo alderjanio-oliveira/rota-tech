@@ -8,7 +8,7 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = UserSessionService.to;
+    final session = Get.find<UserSessionService>();
 
     return Drawer(
       child: SafeArea(
@@ -30,7 +30,7 @@ class AppDrawer extends StatelessWidget {
             }),
 
             Obx(() {
-              if (!UserSessionService.to.isAdmin.value) return const SizedBox();
+              if (!session.isAdmin.value) return const SizedBox();
 
               return ListTile(
                 leading: const Icon(Icons.settings),

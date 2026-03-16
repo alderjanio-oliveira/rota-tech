@@ -1,11 +1,11 @@
 import 'package:get/get.dart';
 
 class UserSessionService extends GetxService {
-  static UserSessionService get to => Get.find();
-
   final RxBool isAdmin = true.obs;
   final RxString userEmail = ''.obs;
   final RxString name = ''.obs;
+  final RxString sessionId = ''.obs;
+  final RxInt userId = 0.obs;
 
   void setAdmin(bool value) {
     isAdmin.value = value;
@@ -17,5 +17,13 @@ class UserSessionService extends GetxService {
 
   void setName(String userName) {
     name.value = userName;
+  }
+
+  void setSessionId(String id) {
+    sessionId.value = id;
+  }
+
+  void setUserId(int id) {
+    userId.value = id;
   }
 }

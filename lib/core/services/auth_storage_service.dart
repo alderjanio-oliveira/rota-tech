@@ -13,16 +13,11 @@ class AuthStorageService {
   // -------------------------
   // SAVE
   // -------------------------
-  Future<void> saveCredentials({required String email, required String password, required bool rememberMe}) async {
+  Future<void> saveCredentials({required String email, required String password}) async {
     final prefs = await SharedPreferences.getInstance();
-
-    if (rememberMe) {
-      await prefs.setString(_keyEmail, email);
-      await prefs.setBool(_keyRememberMe, true);
-      await _secureStorage.write(key: _keyPassword, value: password);
-    } else {
-      await clear();
-    }
+    await prefs.setString(_keyEmail, email);
+    await prefs.setBool(_keyRememberMe, true);
+    await _secureStorage.write(key: _keyPassword, value: password);
   }
 
   // -------------------------

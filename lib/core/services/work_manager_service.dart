@@ -1,7 +1,10 @@
 import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/bindings/main.binding.dart';
+import 'package:app_tracking/core/services/api_helper.dart';
+import 'package:app_tracking/core/services/auth_service.dart';
 import 'package:app_tracking/core/services/auth_storage_service.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
+import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/utils/constants.dart';
@@ -17,8 +20,9 @@ void callbackDispatcher() {
     if (task == Constants.taskTripAlert) {
       final AuthStorageService authStorageService = AuthStorageService();
       if (!(await canAutoLogin(authStorageService))) return Future.value(true);
+      final AuthService authService = AuthService(session: UserSessionService(), apiHelper: ApiHelper());
+      if (!(await login(authStorageService, authService))) return Future.value(true);
       final TraccarService traccarService = TraccarService();
-      if (!(await login(authStorageService, traccarService))) return Future.value(true);
       VehicleState vehicleState = VehicleState();
       final list = await traccarService.getDevices();
       vehicleState.list.assignAll(list.map<DeviceModel>((e) => DeviceModel.fromJson(e as Map<String, dynamic>)));
@@ -61,10 +65,10 @@ Future<bool> canAutoLogin(AuthStorageService authStorageService) async {
       await authStorageService.getPassword() != null;
 }
 
-Future<bool> login(AuthStorageService authStorageService, TraccarService traccarService) async {
+Future<bool> login(AuthStorageService authStorageService, AuthService authService) async {
   final email = await authStorageService.getEmail();
   final password = await authStorageService.getPassword();
   MainBinding().dependencies();
-  final success = await traccarService.login(email!, password!);
+  final success = await authService.login(email!, password!);
   return success;
 }

@@ -3,6 +3,7 @@ import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/bindings/main.binding.dart';
 import 'package:app_tracking/core/routes/routes.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
+import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/core/services/work_manager_service.dart';
 import 'package:app_tracking/ui/controllers/warnings/warning_controller.dart';
 import 'package:app_tracking/ui/pages/home/home_page.dart';
@@ -10,11 +11,13 @@ import 'package:app_tracking/ui/pages/infos/trip_details_page.dart';
 import 'package:app_tracking/ui/pages/login/login_page.dart';
 import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:workmanager/workmanager.dart';
 
 void main() async {
+  await dotenv.load(fileName: ".env");
   await GetStorage.init();
   Workmanager().initialize(callbackDispatcher);
   final notificationService = NotificationService();
@@ -23,7 +26,7 @@ void main() async {
   await Workmanager().registerPeriodicTask(
     Constants.taskTripAlert, // uniqueName
     Constants.taskTripAlert, // taskName
-    frequency: Duration(minutes: 15),
+    frequency: Duration(minutes: Constants.minFrequencyWorkmanager),
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
   final launchDetails = await notificationService.getLaunchDetails();
@@ -73,6 +76,13 @@ class MyApp extends StatelessWidget {
 
   Future<bool> _checkAuth() async {
     // Aqui você pode verificar se existe sessão salva
-    return traccarService.jsessionId != null;
+    if (Get.isRegistered<UserSessionService>()) {
+      final sessionId = Get.find<UserSessionService>().sessionId;
+      if (sessionId.isNotEmpty) {
+        // Tente validar a sessão com o backend, se necessário
+        return true;
+      }
+    }
+    return false;
   }
 }

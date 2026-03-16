@@ -4,6 +4,7 @@ import 'package:app_tracking/app/services/reverse_geocode_service.dart';
 import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
+import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:get/get.dart';
@@ -12,6 +13,7 @@ class HomeController extends GetxController {
   final TraccarService traccarService;
   final ReverseGeocodeService geocodeService;
   final VehicleState vehicles;
+  final UserSessionService session;
 
   final TraccarWebSocketService socketService;
   final PositionEventHandler eventHandler;
@@ -27,6 +29,7 @@ class HomeController extends GetxController {
     required this.vehicles,
     required this.socketService,
     required this.eventHandler,
+    required this.session,
   });
 
   @override
@@ -51,7 +54,6 @@ class HomeController extends GetxController {
     if (socketService.isConnected) return;
 
     socketService.connect(
-      sessionId: traccarService.jsessionId!,
       onData: _onSocketData,
       onError: (e) => print('WS erro: $e'),
     );

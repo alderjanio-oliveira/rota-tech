@@ -1,5 +1,6 @@
 // lib/ui/controllers/auth_controller.dart
 import 'package:app_tracking/app/services/traccar_service.dart';
+import 'package:app_tracking/core/services/auth_service.dart';
 import 'package:app_tracking/core/services/auth_storage_service.dart';
 import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,13 @@ import 'package:workmanager/workmanager.dart';
 
 class AuthController extends GetxController {
   final TraccarService traccarService;
+  final AuthService authService;
+
+  AuthController({
+    required this.traccarService,
+    required this.authService,
+  });
+
   final AuthStorageService authStorageService = AuthStorageService();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -15,8 +23,6 @@ class AuthController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString errorMessage = RxString('');
   final RxBool isLoggedIn = false.obs;
-
-  AuthController(this.traccarService);
 
   final obscurePassword = true.obs;
   final rememberMe = false.obs;
@@ -29,11 +35,6 @@ class AuthController extends GetxController {
       Constants.taskTripAlert,
       initialDelay: Duration(seconds: 20), // Aguarda 10 segundos para garantir que o app esteja totalmente inicializado
     );
-    // Workmanager().registerPeriodicTask(
-    //   Constants.taskTripAlert,
-    //   Constants.taskTripAlert,
-    //   frequency: Duration(minutes: 30), // O Workmanager aceita o tempo minimo de 15 min.
-    // );
     _loadRememberedCredentials();
   }
 
@@ -56,11 +57,11 @@ class AuthController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      final success = await traccarService.login(email, password);
+      final success = await authService.login(email, password);
 
       if (success) {
         isLoggedIn.value = true;
-        authStorageService.saveCredentials(email: email, password: password, rememberMe: rememberMe.value);
+        if (rememberMe.value) await authStorageService.saveCredentials(email: email, password: password);
         return true;
       } else {
         errorMessage.value = 'Credenciais inválidas';
@@ -75,7 +76,7 @@ class AuthController extends GetxController {
   }
 
   void logout() {
-    traccarService.logout();
+    authService.logout();
     isLoggedIn.value = false;
   }
 }

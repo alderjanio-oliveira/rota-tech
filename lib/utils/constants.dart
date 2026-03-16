@@ -6,5 +6,5 @@ class Constants {
   static const String taskTripAlert = "trip_alert";
 
   static const String notificationKey = "notification_payload";
-  static const int frequencyMinutes = 15;
+  static const int minFrequencyWorkmanager = 15;
 }

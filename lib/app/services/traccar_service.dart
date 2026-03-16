@@ -1,57 +1,29 @@
 // lib/core/services/traccar/traccar_service.dart
 import 'dart:convert';
 import 'package:app_tracking/app/models/client_model.dart';
+import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
+import 'package:app_tracking/core/utils/api.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/models/daily_distance.dart';
 import 'package:app_tracking/ui/models/daily_km_model.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class TraccarService extends GetxService {
   static TraccarService get to => Get.find();
-  static UserSessionService get session => UserSessionService.to;
+  static UserSessionService get session => Get.find<UserSessionService>();
 
-  final String baseUrl = "http://167.99.126.116:8082/api";
-  final String urlWs = "ws://167.99.126.116:8082/api/socket";
-  final RxString _jsessionId = RxString('');
-  String? get jsessionId => _jsessionId.value.isEmpty ? null : _jsessionId.value;
-  final RxInt _userId = RxInt(0);
-  String? get userId => _userId.value == 0 ? null : _userId.value.toString();
+  final String baseUrl = dotenv.env['BASEURL']!;
+  final String urlWs = dotenv.env['SOCKET_URL']!;
 
   TraccarService();
-
-  Future<bool> login(String email, String password) async {
-    try {
-      final url = Uri.parse('$baseUrl/session');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {'email': email, 'password': password},
-      );
-
-      if (response.statusCode != 200) return false;
-      final setCookie = response.headers['set-cookie'];
-      _userId.value = json.decode(response.body)['id'];
-      session.isAdmin(json.decode(response.body)['administrator'] == true);
-      session.setUserEmail(email);
-      session.setName(json.decode(response.body)['name']);
-      if (setCookie != null) {
-        final cookieParts = setCookie.split(';')[0].split('=');
-        if (cookieParts.length == 2 && cookieParts[0] == 'JSESSIONID') {
-          _jsessionId.value = cookieParts[1];
-          return true;
-        }
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
+  ApiHelper apiHelper = ApiHelper();
 
   Future<List<dynamic>> getDevices() async {
-    final url = Uri.parse('$baseUrl/devices?userId=$userId');
+    final url = Uri.parse('$baseUrl/devices?userId=${session.userId.value}');
     final response = await http.get(url, headers: _buildHeaders());
 
     if (response.statusCode == 200) {
@@ -60,7 +32,6 @@ class TraccarService extends GetxService {
       } catch (e) {
         throw Exception('Resposta inesperada ao buscar dispositivos: ${response.body}');
       }
-      print(json.decode(response.body));
       return json.decode(response.body);
     } else {
       throw Exception('Failed to load devices: ${response.statusCode}');
@@ -146,21 +117,15 @@ class TraccarService extends GetxService {
       body: json.encode({'id': commandData['id'], 'deviceId': deviceId}),
     );
 
-    print("SEND: ${sendResponse.statusCode} -> ${sendResponse.body}");
-
     return sendResponse.statusCode == 200;
   }
 
   Map<String, String> _buildHeaders() {
     final headers = {'Accept': 'application/json', 'Content-Type': 'application/json'};
-    if (jsessionId != null) {
-      headers['Cookie'] = 'JSESSIONID=$jsessionId';
+    if (session.sessionId.value.isNotEmpty) {
+      headers['Cookie'] = 'JSESSIONID=${session.sessionId.value}';
     }
     return headers;
-  }
-
-  void logout() {
-    _jsessionId.value = '';
   }
 
   Future<double?> getDailyDistance({required int deviceId, required DateTime day}) async {
@@ -278,7 +243,7 @@ class TraccarService extends GetxService {
   Future<bool> renewClientContract(ClientModel client) async {
     final newExpireDate = DateTime(client.expiresAt!.year, client.expiresAt!.month + 1, client.expiresAt!.day);
 
-    final url = Uri.parse('$baseUrl/users/$userId');
+    final url = Uri.parse('$baseUrl/users/${session.userId.value}');
 
     final response = await http.put(
       url,

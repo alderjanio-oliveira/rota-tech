@@ -112,7 +112,7 @@ class MapCustomController extends GetxController {
   // ===============================
 
   void _connectSocket() {
-    socketService.connect(sessionId: traccarService.jsessionId!, onData: _onSocketData);
+    socketService.connect(onData: _onSocketData);
   }
 
   void _onSocketData(Map<String, dynamic> data) {

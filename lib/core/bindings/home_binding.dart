@@ -3,6 +3,7 @@ import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
+import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/ui/controllers/home_controller.dart';
 import 'package:get/get.dart';
@@ -22,6 +23,7 @@ class HomeBinding implements Bindings {
         vehicles: Get.find<VehicleState>(),
         socketService: Get.find<TraccarWebSocketService>(),
         eventHandler: Get.find<PositionEventHandler>(),
+        session: Get.find<UserSessionService>(),
       ),
     );
   }

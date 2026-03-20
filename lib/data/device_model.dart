@@ -1,9 +1,12 @@
+import 'package:get/get.dart';
+
 class DeviceModel {
   final int id;
   final String name;
   final String status;
   final DeviceAttributes attributes;
   final int? lastPositionId;
+  final RxBool loading = false.obs;
 
   DeviceModel({
     required this.id,
@@ -59,18 +62,18 @@ class DeviceModel {
 
 class DeviceAttributes {
   final bool? ignition;
-  final bool? lockState;
+  RxnBool lockState;
   final bool? charge;
   final double? totalDistance;
   final String? address;
   final Trip? trip;
 
-  DeviceAttributes({required this.ignition, this.lockState, this.charge, this.totalDistance, this.address, this.trip});
+  DeviceAttributes({required this.ignition, required this.lockState, this.charge, this.totalDistance, this.address, this.trip});
 
   factory DeviceAttributes.fromJson(Map<String, dynamic> json) {
     return DeviceAttributes(
       ignition: json['ignition'] ?? false,
-      lockState: json['lockState'],
+      lockState: RxnBool(json['lockState']),
       charge: json['charge'],
       totalDistance: json['totalDistance']?.toDouble(),
       address: json['address'],
@@ -78,7 +81,7 @@ class DeviceAttributes {
     );
   }
 
-  DeviceAttributes copyWith({bool? ignition, bool? lockState, bool? charge, double? totalDistance, String? address, Trip? trip}) {
+  DeviceAttributes copyWith({bool? ignition, RxnBool? lockState, bool? charge, double? totalDistance, String? address, Trip? trip}) {
     return DeviceAttributes(
       ignition: ignition ?? this.ignition,
       lockState: lockState ?? this.lockState,

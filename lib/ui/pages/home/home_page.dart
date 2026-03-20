@@ -67,6 +67,7 @@ class HomePage extends GetView<HomeController> {
                   deviceName: device.name,
                   status: device.status,
                   lastUpdate: device.lastPositionId,
+                  loading: device.loading,
                   onTap: () => GenericModalMolecule.show(
                     context: context,
                     title: 'Deseja ver os detalhes do veículo?',
@@ -81,23 +82,27 @@ class HomePage extends GetView<HomeController> {
                     // );
                   },
                   actions: [
-                    ActionButton(
-                      tooltip: 'Engine',
-                      icon: device.attributes.lockState == true ? Icons.lock_sharp : Icons.lock_open_sharp,
-                      locked: device.attributes.lockState == null ? null : !device.attributes.lockState!,
-                      onPressed: () {
-                        final lockState = device.attributes.lockState;
+                    Obx(
+                      () => device.loading.value
+                          ? CircularProgressIndicator()
+                          : ActionButton(
+                              tooltip: 'Engine',
+                              icon: device.attributes.lockState == true ? Icons.lock_sharp : Icons.lock_open_sharp,
+                              locked: device.attributes.lockState.value == null ? null : !device.attributes.lockState.value!,
+                              onPressed: () {
+                                final lockState = device.attributes.lockState;
 
-                        if (lockState == null) {
-                          EngineActionModal.show(
-                            context: context,
-                            onEngineOn: () => controller.sendCommand(device.id, 'engineResume'),
-                            onEngineOff: () => controller.sendCommand(device.id, 'engineStop'),
-                          );
-                          return;
-                        }
-                        controller.sendCommand(device.id, lockState ? 'engineResume' : 'engineStop');
-                      },
+                                if (lockState.value == null) {
+                                  EngineActionModal.show(
+                                    context: context,
+                                    onEngineOn: () => controller.sendCommand(index, 'engineResume'),
+                                    onEngineOff: () => controller.sendCommand(index, 'engineStop'),
+                                  );
+                                  return;
+                                }
+                                controller.sendCommand(index, lockState.value! ? 'engineResume' : 'engineStop');
+                              },
+                            ),
                     ),
                   ],
                 ),

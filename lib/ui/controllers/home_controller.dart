@@ -150,12 +150,19 @@ class HomeController extends GetxController {
   // COMMANDS
   // =======================
 
-  Future<bool> sendCommand(int deviceId, String command) async {
+  Future<void> sendCommand(int index, String command) async {
+    vehicles.list[index].loading.value = true;
+    final deviceId = vehicles.list[index].id;
     try {
-      return await traccarService.sendCommand(deviceId, command);
+      await traccarService.sendCommand(deviceId, command);
+      vehicles.list[index].attributes.lockState.value = command == 'engineStop';
+      vehicles.list.refresh();
     } catch (_) {
       errorMessage.value = 'Erro ao enviar comando';
-      return false;
+    } finally {
+      vehicles.list[index].loading.value = false;
+      // vehicles.list.refresh();
+      // refreshStatus();
     }
   }
 }

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
-import 'package:app_tracking/core/utils/api.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/models/daily_distance.dart';
 import 'package:app_tracking/ui/models/daily_km_model.dart';
@@ -222,7 +221,6 @@ class TraccarService extends GetxService {
     }
 
     final List data = json.decode(response.body);
-    print(data);
 
     /// Retorna SOMENTE clientes (remove admin)
     return data.where((u) => u['administrator'] != true).map<Map<String, dynamic>>((u) {

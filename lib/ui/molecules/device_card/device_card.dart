@@ -1,5 +1,6 @@
 // lib/ui/molecules/device_card/device_card.dart
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 class DeviceCard extends StatelessWidget {
@@ -14,6 +15,7 @@ class DeviceCard extends StatelessWidget {
   final VoidCallback? resetTrip;
   final String? address;
   final bool? charge;
+  final RxBool loading;
 
   const DeviceCard({
     super.key,
@@ -28,6 +30,7 @@ class DeviceCard extends StatelessWidget {
     this.resetTrip,
     this.address,
     this.charge = true,
+    required this.loading,
   });
 
   _choiceKeyColor(bool? status) {

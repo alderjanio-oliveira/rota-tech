@@ -40,7 +40,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  final TraccarService traccarService = TraccarService();
+  // final TraccarService traccarService = TraccarService();
   final String? notificationPayload;
 
   MyApp({super.key, this.notificationPayload});

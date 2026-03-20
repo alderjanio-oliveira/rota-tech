@@ -14,9 +14,9 @@ class VehicleState {
   void deviceUpdate(int index, Map<String, dynamic> attrs) {
     final device = list[index];
 
+    device.attributes.lockState.value = attrs['blocked'] ?? device.attributes.lockState.value;
     final updatedAttributes = device.attributes.copyWith(
       ignition: attrs['ignition'] ?? attrs['motion'],
-      lockState: attrs['blocked'] ?? device.attributes.lockState,
       charge: attrs['charge'] ?? device.attributes.charge,
       totalDistance: attrs['totalDistance']?.toDouble() ?? device.attributes.totalDistance,
     );
@@ -32,10 +32,10 @@ class VehicleState {
 
       final attrs = position['attributes'] ?? {};
 
+      list[i].attributes.lockState.value = attrs['blocked'] ?? list[i].attributes.lockState.value;
       var updatedDevice = device.copyWith(
         attributes: device.attributes.copyWith(
           ignition: attrs['ignition'] ?? attrs['motion'],
-          lockState: attrs['blocked'] ?? device.attributes.lockState,
           charge: attrs['charge'] ?? device.attributes.charge,
           totalDistance: attrs['totalDistance']?.toDouble() ?? device.attributes.totalDistance,
         ),

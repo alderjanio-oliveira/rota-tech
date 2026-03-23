@@ -39,6 +39,8 @@ class MapCustomController extends GetxController {
   /// Callback para mover câmera
   Function(LatLng position)? onPositionUpdated;
 
+  final Map<int, double> _lastHeading = {};
+
   // ===============================
   // LIFECYCLE
   // ===============================
@@ -82,7 +84,7 @@ class MapCustomController extends GetxController {
         DeviceModel hasVehicle = vehicle.list.firstWhere((i) => i.id == p['deviceId']);
         return DevicePosition(
           id: p['deviceId'],
-          name: p['deviceName'] ?? 'Sem Nome',
+          name: hasVehicle.name,
           latitude: (p['latitude'] as num).toDouble(),
           longitude: (p['longitude'] as num).toDouble(),
           ignition: hasVehicle.attributes.ignition ?? p['attributes']?['ignition'] ?? p['attributes']?['motion'] ?? false,
@@ -130,6 +132,8 @@ class MapCustomController extends GetxController {
 
       final heading = (pos['course'] ?? 0).toDouble();
 
+      _lastHeading[deviceId] = heading;
+
       final speedKmh = pos['speed'] != null ? (pos['speed'] as num).toDouble() : null;
 
       if (devices[index].latitude == newLat && devices[index].longitude == newLng) {
@@ -137,7 +141,11 @@ class MapCustomController extends GetxController {
       }
 
       // Atualiza engine (NÃO atualiza device direto)
-      _motionEngines[deviceId]?.updateRealPosition(newPosition: LatLng(newLat, newLng), heading: heading, speedKmh: speedKmh);
+      _motionEngines[deviceId]?.updateRealPosition(
+        newPosition: LatLng(newLat, newLng),
+        heading: heading,
+        speedKmh: speedKmh,
+      );
     }
   }
 
@@ -153,7 +161,11 @@ class MapCustomController extends GetxController {
 
       if (index == -1) return;
 
-      final updated = devices[index].copyWith(latitude: predictedPosition.latitude, longitude: predictedPosition.longitude);
+      final updated = devices[index].copyWith(
+        latitude: predictedPosition.latitude,
+        longitude: predictedPosition.longitude,
+        heading: _lastHeading[deviceId] ?? devices[index].heading,
+      );
 
       devices[index] = updated;
 

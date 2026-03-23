@@ -14,6 +14,8 @@ class ClientsAdminController extends GetxController {
   final RxList<ClientModel> clients = <ClientModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
+  final RxString search = ''.obs;
+  final RxString filter = 'todos'.obs;
 
   @override
   void onInit() {

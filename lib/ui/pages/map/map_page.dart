@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:app_tracking/ui/controllers/map_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -21,6 +20,7 @@ class _MapWidgetState extends State<MapWidget> {
 
   bool _initialCameraSet = false;
   bool _followVehicle = true;
+  int? _selectedDeviceId;
 
   @override
   void initState() {
@@ -46,18 +46,24 @@ class _MapWidgetState extends State<MapWidget> {
           /// 🗺️ MAPA
           FlutterMap(
             mapController: mapController,
-            options: const MapOptions(),
+            options: MapOptions(
+              onTap: (_, __) {
+                setState(() {
+                  _selectedDeviceId = null;
+                });
+              },
+            ),
             children: [
-              /// 🔥 TILE PROFISSIONAL (COM OVERLAY)
+              /// TILE
               TileLayer(
                 urlTemplate: 'https://api.maptiler.com/maps/bright-v2/{z}/{x}/{y}.png?key=xvu6cMMOUoNcxzaLO3IE',
                 userAgentPackageName: 'com.example.app_tracking',
               ),
 
-              /// 🌙 DARK OVERLAY (CORRETO)
+              /// DARK OVERLAY
               if (isDark) Container(color: Colors.black.withOpacity(0.35)),
 
-              /// 🔵 TRILHAS
+              /// TRILHAS
               Obx(() {
                 if (controller.trails.isEmpty) return const SizedBox();
 
@@ -75,7 +81,7 @@ class _MapWidgetState extends State<MapWidget> {
                 );
               }),
 
-              /// 🚗 MARKERS
+              /// MARKERS
               Obx(() {
                 final validDevices = controller.devices.where((d) => d.latitude != 0 && d.longitude != 0).toList();
 
@@ -90,15 +96,46 @@ class _MapWidgetState extends State<MapWidget> {
 
                 return MarkerLayer(
                   markers: validDevices.map((d) {
-                    return Marker(
-                      width: 36,
-                      height: 36,
-                      point: LatLng(d.latitude, d.longitude),
+                    final isSelected = _selectedDeviceId == d.id;
 
-                      child: Transform.rotate(
-                        // 🔥 CORREÇÃO REAL DO HEADING
-                        angle: (d.heading + 90) * (pi / 180),
-                        child: _VehicleMarker(isActive: d.ignition),
+                    return Marker(
+                      width: 90,
+                      height: 70,
+                      point: LatLng(d.latitude, d.longitude),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedDeviceId = d.id;
+                          });
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Transform.rotate(
+                              angle: d.heading * (pi / 180),
+                              child: _VehicleMarker(
+                                isActive: d.ignition,
+                                isSelected: isSelected,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                d.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }).toList(),
@@ -107,7 +144,7 @@ class _MapWidgetState extends State<MapWidget> {
             ],
           ),
 
-          /// 🎮 CONTROLES
+          /// CONTROLES
           Positioned(
             right: 16,
             bottom: 120,
@@ -126,6 +163,40 @@ class _MapWidgetState extends State<MapWidget> {
                 ),
               ],
             ),
+          ),
+
+          /// CARD ANIMADO
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Obx(() {
+              final device = controller.devices.firstWhereOrNull((d) => d.id == _selectedDeviceId);
+
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, animation) {
+                  final slide = Tween(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(animation);
+
+                  return SlideTransition(
+                    position: slide,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+                child: device == null
+                    ? const SizedBox()
+                    : _VehicleInfoCard(
+                        key: ValueKey(device.id),
+                        device: device,
+                      ),
+              );
+            }),
           ),
         ],
       ),
@@ -164,28 +235,35 @@ class _MapWidgetState extends State<MapWidget> {
   }
 }
 
-/// 🚗 MARKER MELHORADO
+/// MARKER
 class _VehicleMarker extends StatelessWidget {
   final bool isActive;
+  final bool isSelected;
 
-  const _VehicleMarker({required this.isActive});
+  const _VehicleMarker({
+    required this.isActive,
+    required this.isSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
     final color = isActive ? Colors.green : Colors.grey;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      transform: Matrix4.identity()..scale(isSelected ? 1.2 : 1.0),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white,
+        border: isSelected ? Border.all(color: Colors.blueAccent, width: 2) : null,
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
+            blurRadius: isSelected ? 16 : 8,
             color: Colors.black.withOpacity(0.3),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(6),
       child: Icon(
         Icons.navigation_rounded,
         color: color,
@@ -195,7 +273,86 @@ class _VehicleMarker extends StatelessWidget {
   }
 }
 
-/// 🔘 BOTÃO MAPA
+/// CARD
+class _VehicleInfoCard extends StatelessWidget {
+  final dynamic device;
+
+  const _VehicleInfoCard({super.key, required this.device});
+
+  @override
+  Widget build(BuildContext context) {
+    final isOn = device.ignition == true;
+
+    return Material(
+      borderRadius: BorderRadius.circular(20),
+      elevation: 10,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Theme.of(context).cardColor,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: isOn ? Colors.green : Colors.grey,
+                  child: const Icon(Icons.directions_car, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    device.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Text(
+                  isOn ? 'ON' : 'OFF',
+                  style: TextStyle(
+                    color: isOn ? Colors.green : Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _InfoItem(
+                  label: 'Distância',
+                  value: '${(device.totalDistance / 1000).toStringAsFixed(2)} km',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoItem({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+}
+
+/// BOTÃO
 class _MapButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;

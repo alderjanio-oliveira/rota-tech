@@ -40,6 +40,16 @@ class ApiHelper {
     return response;
   }
 
+  Future<dynamic> postJson(Map<String, dynamic> body, String url) async {
+    final uri = Uri.parse(url);
+    final response = await http.post(
+      uri,
+      headers: _buildHeaders(),
+      body: jsonEncode(body),
+    );
+    return response;
+  }
+
   Map<String, String> _buildHeaders() {
     final headers = {'Accept': 'application/json', 'Content-Type': 'application/json'};
     if (session.sessionId.value.isNotEmpty) {

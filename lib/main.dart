@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/bindings/main.binding.dart';
+import 'package:app_tracking/core/i18n/translation.dart';
 import 'package:app_tracking/core/routes/routes.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
@@ -9,6 +10,7 @@ import 'package:app_tracking/ui/controllers/warnings/warning_controller.dart';
 import 'package:app_tracking/ui/pages/home/home_page.dart';
 import 'package:app_tracking/ui/pages/infos/trip_details_page.dart';
 import 'package:app_tracking/ui/pages/login/login_page.dart';
+import 'package:app_tracking/ui/theme/app_theme.dart';
 import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -48,6 +50,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system, // 🔥 automático
+      translations: AppTranslations(),
+      locale: const Locale('pt', 'BR'),
+      fallbackLocale: const Locale('en', 'US'),
       title: 'Traccar App',
       initialBinding: MainBinding(),
       getPages: mainRouters,

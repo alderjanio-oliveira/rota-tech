@@ -10,6 +10,8 @@ class TextInputField extends StatelessWidget {
   final String? errorText;
   final TextEditingController? controller;
   final Widget? suffixIcon;
+  final bool autofocus;
+  final VoidCallback? onEditingComplete;
 
   const TextInputField({
     super.key,
@@ -21,29 +23,77 @@ class TextInputField extends StatelessWidget {
     this.errorText,
     this.controller,
     this.suffixIcon,
+    this.autofocus = false,
+    this.onEditingComplete,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            hintText: hintText,
-            errorText: errorText,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            suffixIcon: suffixIcon,
+    final theme = Theme.of(context);
+
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
+      autofocus: autofocus,
+      onEditingComplete: onEditingComplete,
+      style: theme.textTheme.bodyMedium,
+
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        errorText: errorText,
+
+        /// ICON
+        suffixIcon: suffixIcon,
+
+        /// 🔥 PADDING
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+
+        /// 🔥 ESTILO BASE
+        filled: true,
+        fillColor: theme.cardColor,
+
+        /// 🔥 BORDA PADRÃO
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+
+        /// 🔥 FOCO
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 1.5,
           ),
         ),
-      ],
+
+        /// 🔥 ERRO
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.error,
+          ),
+        ),
+
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: theme.colorScheme.error,
+            width: 1.5,
+          ),
+        ),
+
+        /// 🔥 LABEL STYLE
+        labelStyle: TextStyle(
+          color: theme.textTheme.bodySmall?.color,
+        ),
+      ),
     );
   }
 }

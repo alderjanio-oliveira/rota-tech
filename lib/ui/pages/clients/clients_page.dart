@@ -1,4 +1,5 @@
 // lib/features/clients/ui/clients_admin_page.dart
+import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/ui/controllers/clients_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -39,20 +40,23 @@ class ClientsAdminPage extends StatelessWidget {
 
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: ListTile(
-                leading: CircleAvatar(backgroundColor: _statusColor(days), child: Text(days.toString())),
-                title: Text(client.name),
-                subtitle: Text(
-                  client.expiresAt != null
-                      ? 'Vence em: ${client.expiresAt!.toLocal().toString().split(' ').first}'
-                      : 'Sem data de vencimento',
-                ),
-                trailing: Wrap(
-                  spacing: 4,
-                  children: [
-                    IconButton(onPressed: () => controller.sendWhatsAppReminder(client), icon: Icon(Icons.message)),
-                    IconButton(icon: const Icon(Icons.refresh), onPressed: () => controller.renewContract(client)),
-                  ],
+              child: GestureDetector(
+                onTap: () => Get.toNamed(Routes.CLIENTS_DETAILS, arguments: client),
+                child: ListTile(
+                  leading: CircleAvatar(backgroundColor: _statusColor(days), child: Text(days.toString())),
+                  title: Text(client.name),
+                  subtitle: Text(
+                    client.expiresAt != null
+                        ? 'Vence em: ${client.expiresAt!.toLocal().toString().split(' ').first}'
+                        : 'Sem data de vencimento',
+                  ),
+                  trailing: Wrap(
+                    spacing: 4,
+                    children: [
+                      IconButton(onPressed: () => controller.sendWhatsAppReminder(client), icon: Icon(Icons.message)),
+                      IconButton(icon: const Icon(Icons.refresh), onPressed: () => controller.renewContract(client)),
+                    ],
+                  ),
                 ),
               ),
             );

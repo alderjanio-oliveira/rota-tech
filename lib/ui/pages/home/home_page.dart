@@ -30,24 +30,42 @@ class HomePage extends GetView<HomeController> {
       drawer: const AppDrawer(),
       body: Obx(() {
         if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (controller.errorMessage.value.isNotEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(controller.errorMessage.value),
-                const SizedBox(height: 16),
-                PrimaryButton(text: 'Tentar Novamente', onPressed: controller.loadDevices),
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Carregando dispositivos...'),
               ],
             ),
           );
         }
 
+        // if (controller.errorMessage.value.isNotEmpty) {
+        //   return Center(
+        //     child: Column(
+        //       mainAxisAlignment: MainAxisAlignment.center,
+        //       children: [
+        //         Text(controller.errorMessage.value),
+        //         const SizedBox(height: 16),
+        //         PrimaryButton(text: 'Tentar Novamente', onPressed: controller.loadDevices),
+        //       ],
+        //     ),
+        //   );
+        // }
+
         if (controller.vehicles.list.isEmpty) {
-          return const Center(child: Text('Nenhum dispositivo encontrado'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.directions_car_outlined, size: 48),
+                SizedBox(height: 12),
+                Text('Nenhum dispositivo encontrado'),
+              ],
+            ),
+          );
         }
 
         return Obx(
@@ -59,14 +77,14 @@ class HomePage extends GetView<HomeController> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DeviceCard(
-                  charge: device.attributes.charge,
+                  // charge: device.attributes.charge,
                   address: device.attributes.address,
-                  id: device.id,
+                  // id: device.id,
                   totalDistance: device.attributes.totalDistance ?? 0.0,
                   ignitionStatus: device.attributes.ignition,
                   deviceName: device.name,
                   status: device.status,
-                  lastUpdate: device.lastPositionId,
+                  // lastUpdate: device.lastPositionId,
                   loading: device.loading,
                   onTap: () => GenericModalMolecule.show(
                     context: context,
@@ -74,37 +92,37 @@ class HomePage extends GetView<HomeController> {
                     primaryMethod: () => Get.toNamed(Routes.VEHICLE_DETAILS, arguments: device),
                     secondyMethod: () => Get.back(),
                   ),
-                  resetTrip: () {
-                    GetStorage box = GetStorage();
-                    // box.write(
-                    //   'OffSetTripA${device['id']}',
-                    //   device['attributes']?['totalDistance'] ?? 0.0,
-                    // );
-                  },
-                  actions: [
-                    Obx(
-                      () => device.loading.value
-                          ? CircularProgressIndicator()
-                          : ActionButton(
-                              tooltip: 'Engine',
-                              icon: device.attributes.lockState == true ? Icons.lock_sharp : Icons.lock_open_sharp,
-                              locked: device.attributes.lockState.value == null ? null : !device.attributes.lockState.value!,
-                              onPressed: () {
-                                final lockState = device.attributes.lockState;
+                  // resetTrip: () {
+                  //   GetStorage box = GetStorage();
+                  //   // box.write(
+                  //   //   'OffSetTripA${device['id']}',
+                  //   //   device['attributes']?['totalDistance'] ?? 0.0,
+                  //   // );
+                  // },
+                  //   actions: [
+                  //     Obx(
+                  //       () => device.loading.value
+                  //           ? CircularProgressIndicator()
+                  //           : ActionButton(
+                  //               tooltip: 'Engine',
+                  //               icon: device.attributes.lockState == true ? Icons.lock_sharp : Icons.lock_open_sharp,
+                  //               locked: device.attributes.lockState.value == null ? null : !device.attributes.lockState.value!,
+                  //               onPressed: () {
+                  //                 final lockState = device.attributes.lockState;
 
-                                if (lockState.value == null) {
-                                  EngineActionModal.show(
-                                    context: context,
-                                    onEngineOn: () => controller.sendCommand(index, 'engineResume'),
-                                    onEngineOff: () => controller.sendCommand(index, 'engineStop'),
-                                  );
-                                  return;
-                                }
-                                controller.sendCommand(index, lockState.value! ? 'engineResume' : 'engineStop');
-                              },
-                            ),
-                    ),
-                  ],
+                  //                 if (lockState.value == null) {
+                  //                   EngineActionModal.show(
+                  //                     context: context,
+                  //                     onEngineOn: () => controller.sendCommand(index, 'engineResume'),
+                  //                     onEngineOff: () => controller.sendCommand(index, 'engineStop'),
+                  //                   );
+                  //                   return;
+                  //                 }
+                  //                 controller.sendCommand(index, lockState.value! ? 'engineResume' : 'engineStop');
+                  //               },
+                  //             ),
+                  //     ),
+                  //   ],
                 ),
               );
             },

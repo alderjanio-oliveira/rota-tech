@@ -9,6 +9,7 @@ class Api {
   String devices = '$baseUrl/devices';
   String makeCommands = '$baseUrl/commands';
   String sendCommand = '$baseUrl/commands/send';
+  String permissions = '$baseUrl/permissions';
   String positions(deviceId) => '$baseUrl/positions?deviceId=$deviceId';
   String renewUser(session) => '$baseUrl/users/${session.userId.value}';
 }

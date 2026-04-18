@@ -24,7 +24,7 @@ class VehicleDetailsController extends GetxController {
 
   @override
   void onInit() {
-    target.text = device.attributes.trip?.target?.toStringAsFixed(2) ?? '';
+    target.text = device.attributes.trip?.target?.toString() ?? '';
     tripCalculate();
     super.onInit();
   }

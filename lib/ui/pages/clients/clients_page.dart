@@ -18,16 +18,14 @@ class ClientsAdminPage extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final clients = controller.clients;
-
-        if (clients.isEmpty) {
+        if (controller.clients.list.isEmpty) {
           return const Center(child: Text('Nenhum cliente encontrado'));
         }
 
         /// 🔥 FILTROS LOCAIS (simples e eficiente)
         final search = controller.search.value.toLowerCase();
 
-        final filtered = clients.where((c) {
+        final filtered = controller.clients.list.where((c) {
           final matchSearch = c.name.toLowerCase().contains(search);
 
           if (controller.filter.value == 'todos') return matchSearch;
@@ -47,7 +45,7 @@ class ClientsAdminPage extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             /// 📊 KPIs
-            _KpiHeader(clients: clients),
+            _KpiHeader(clients: controller.clients.list),
 
             const SizedBox(height: 16),
 

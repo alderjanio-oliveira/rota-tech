@@ -50,7 +50,11 @@ class VehicleMotionEngine {
 
       final distancePerFrame = _state.speed / MotionConfig.fps;
 
-      final projected = GeoUtils.projectPosition(start: _state.currentPosition!, distanceMeters: distancePerFrame, headingDegrees: _state.heading);
+      final projected = GeoUtils.projectPosition(
+        start: _state.currentPosition!,
+        distanceMeters: distancePerFrame,
+        headingDegrees: _state.heading,
+      );
 
       _state.currentPosition = projected;
 

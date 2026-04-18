@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
+import 'package:app_tracking/core/utils/api.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/models/daily_distance.dart';
 import 'package:app_tracking/ui/models/daily_km_model.dart';
@@ -234,6 +235,22 @@ class TraccarService extends GetxService {
         'contractStart': attributes['contractStart'],
         'expiresAt': u['expirationTime'],
         'notified': attributes['notified'] ?? false,
+      };
+    }).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getDevicesPerUser() async {
+    final response = await apiHelper.get(Api().permissions);
+    if (response.statusCode != 200) {
+      throw Exception('Erro ao buscar dispositivos por usuário: ${response.statusCode}');
+    }
+
+    final List data = json.decode(response.body);
+
+    return data.map<Map<String, dynamic>>((u) {
+      return {
+        'userId': u['userId'],
+        'devices': u['devices'] ?? [],
       };
     }).toList();
   }

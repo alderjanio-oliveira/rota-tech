@@ -185,7 +185,6 @@ class _KpiSection extends StatelessWidget {
       title: 'Zerar Trip',
       description: 'Informe a meta em KM',
       primaryMethod: () {
-        Get.back();
         controller.resetTip(
           'trip A',
           controller.target.text.isEmpty ? 0.0 : double.tryParse(controller.target.text) ?? 0.0,
@@ -194,9 +193,13 @@ class _KpiSection extends StatelessWidget {
       body: TextFormField(
         controller: controller.target,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'Meta (km)'),
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          labelText: 'Meta (km)',
+          border: OutlineInputBorder(),
+        ),
       ),
-      secondyMethod: () => Get.back(),
+      secondyMethod: () {},
     );
   }
 }

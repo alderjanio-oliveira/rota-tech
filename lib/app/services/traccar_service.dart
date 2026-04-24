@@ -20,7 +20,9 @@ class TraccarService extends GetxService {
   final String urlWs = dotenv.env['SOCKET_URL']!;
 
   TraccarService();
-  ApiHelper apiHelper = ApiHelper();
+  ApiHelper apiHelper = ApiHelper(
+    session: Get.find<UserSessionService>(),
+  );
 
   Future<List<dynamic>> getDevices() async {
     final url = Uri.parse('$baseUrl/devices?userId=${session.userId.value}');

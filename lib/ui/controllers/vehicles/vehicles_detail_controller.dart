@@ -78,5 +78,7 @@ class VehicleDetailsController extends GetxController {
       offset: device.attributes.totalDistance ?? 0.0,
       target: target,
     );
+    vehicleState.load();
+    trip = '0.00';
   }
 }

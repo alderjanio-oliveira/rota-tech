@@ -1,4 +1,6 @@
+import 'package:app_tracking/app/services/reverse_geocode_service.dart';
 import 'package:app_tracking/app/services/traccar_service.dart';
+import 'package:app_tracking/app/services/vehicle_services.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/auth_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
@@ -11,11 +13,26 @@ import 'package:get/get.dart';
 class MainBinding implements Bindings {
   @override
   void dependencies() {
-    Get.put(VehicleState(), permanent: true);
+    Get.put(UserSessionService(), permanent: true);
+    Get.lazyPut<ReverseGeocodeService>(() => ReverseGeocodeService());
+    Get.lazyPut<VehicleServices>(
+      () => VehicleServices(geocodeService: Get.find<ReverseGeocodeService>(), session: Get.find<UserSessionService>()),
+      fenix: true,
+    );
+    Get.put(
+      VehicleState(
+        vehicleServices: Get.find<VehicleServices>(),
+      ),
+      permanent: true,
+    );
     Get.put(ClientState(), permanent: true);
     Get.put(NotificationState(), permanent: true);
-    Get.put(UserSessionService(), permanent: true);
-    Get.put(ApiHelper(), permanent: true);
+    Get.put(
+      ApiHelper(
+        session: Get.find<UserSessionService>(),
+      ),
+      permanent: true,
+    );
     Get.lazyPut(() => AuthService(session: Get.find<UserSessionService>(), apiHelper: Get.find<ApiHelper>()), fenix: true);
 
     Get.lazyPut<TraccarService>(() => TraccarService());

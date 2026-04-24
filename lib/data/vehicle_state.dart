@@ -1,14 +1,29 @@
+import 'package:app_tracking/app/services/vehicle_services.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/model/positiion_model.dart';
 import 'package:get/get.dart';
 
 class VehicleState {
+  final VehicleServices vehicleServices;
   final RxList<DeviceModel> list = <DeviceModel>[].obs;
   final RxList<DevicePosition> positions = <DevicePosition>[].obs;
+
+  VehicleState({
+    required this.vehicleServices,
+  });
 
   onInit() {
     ever(list, (_) => print("Devices updated: ${list.length} devices"));
     ever(positions, (_) => print("Positions updated: ${positions.length} positions"));
+  }
+
+  Future<void> load() async {
+    final getDevices = await vehicleServices.getDevices();
+    list.assignAll(getDevices.map<DeviceModel>((e) => DeviceModel.fromJson(e as Map<String, dynamic>)));
+    final getPositions = await vehicleServices.getLastPositions();
+    positionsInfo(getPositions);
+    await vehicleServices.loadAddresses(list, getPositions);
+    list.refresh();
   }
 
   void deviceUpdate(int index, Map<String, dynamic> attrs) {

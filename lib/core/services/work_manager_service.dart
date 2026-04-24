@@ -1,4 +1,6 @@
+import 'package:app_tracking/app/services/reverse_geocode_service.dart';
 import 'package:app_tracking/app/services/traccar_service.dart';
+import 'package:app_tracking/app/services/vehicle_services.dart';
 import 'package:app_tracking/core/bindings/main.binding.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/auth_service.dart';
@@ -9,25 +11,39 @@ import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:workmanager/workmanager.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     WidgetsFlutterBinding.ensureInitialized();
+    await GetStorage.init();
+    await dotenv.load();
 
     if (task == Constants.taskTripAlert) {
       final AuthStorageService authStorageService = AuthStorageService();
       if (!(await canAutoLogin(authStorageService))) return Future.value(true);
-      final AuthService authService = AuthService(session: UserSessionService(), apiHelper: ApiHelper());
+      final session = UserSessionService();
+      final AuthService authService = AuthService(
+        session: session,
+        apiHelper: ApiHelper(session: session),
+      );
       if (!(await login(authStorageService, authService))) return Future.value(true);
-      final TraccarService traccarService = TraccarService();
-      VehicleState vehicleState = VehicleState();
-      final list = await traccarService.getDevices();
-      vehicleState.list.assignAll(list.map<DeviceModel>((e) => DeviceModel.fromJson(e as Map<String, dynamic>)));
-      final positions = await traccarService.getLastPositions();
-      vehicleState.positionsInfo(positions);
+      // final TraccarService traccarService = TraccarService();
+      final ReverseGeocodeService geocodeService = ReverseGeocodeService();
+      final VehicleServices vehicleServices = VehicleServices(
+        session: session,
+        geocodeService: geocodeService,
+      );
+      VehicleState vehicleState = VehicleState(vehicleServices: vehicleServices);
+      await vehicleState.load();
+      // final list = await traccarService.getDevices();
+      // vehicleState.list.assignAll(list.map<DeviceModel>((e) => DeviceModel.fromJson(e as Map<String, dynamic>)));
+      // final positions = await traccarService.getLastPositions();
+      // vehicleState.positionsInfo(positions);
       String allDevicesInfo = '';
       for (final device in vehicleState.list) {
         if (device.attributes.charge != null && !device.attributes.charge!) {
@@ -68,7 +84,6 @@ Future<bool> canAutoLogin(AuthStorageService authStorageService) async {
 Future<bool> login(AuthStorageService authStorageService, AuthService authService) async {
   final email = await authStorageService.getEmail();
   final password = await authStorageService.getPassword();
-  MainBinding().dependencies();
   final success = await authService.login(email!, password!);
   return success;
 }

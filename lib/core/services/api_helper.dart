@@ -2,13 +2,14 @@ import 'dart:convert';
 
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
 class ApiHelper {
   static String get baseUrl => dotenv.env['BASEURL']!;
   static String get urlWs => dotenv.env['SOCKET_URL']!;
-  UserSessionService session = Get.find<UserSessionService>();
+  UserSessionService session;
+
+  ApiHelper({required this.session});
 
   Future<dynamic> post(Map<String, String> body, String url) async {
     try {

@@ -94,56 +94,12 @@ class HomeController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
-
-      final list = await traccarService.getDevices();
-      vehicles.list.assignAll(list.map<DeviceModel>((e) => DeviceModel.fromJson(e as Map<String, dynamic>)));
-
-      await refreshStatus();
+      vehicles.load();
     } catch (e) {
       errorMessage.value = 'Erro ao carregar dispositivos';
     } finally {
       isLoading.value = false;
     }
-  }
-
-  // =======================
-  // STATUS
-  // =======================
-
-  Future<void> refreshStatus() async {
-    print('Refresh start');
-    try {
-      final positions = await traccarService.getLastPositions();
-
-      vehicles.positionsInfo(positions);
-      isLoading.value = false;
-      await loadAddresses(vehicles.list, positions);
-      print('refresh done');
-    } catch (e) {
-      print(e);
-      errorMessage.value = 'Erro ao atualizar status';
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> loadAddresses(List<DeviceModel> devicesList, Map<int, dynamic> positions) async {
-    for (int i = 0; i < devicesList.length; i++) {
-      final device = devicesList[i];
-      final position = positions[device.id];
-
-      if (position == null) continue;
-      if (device.attributes.address != null && device.attributes.address!.isNotEmpty) continue;
-      final lat = position['latitude'];
-      final lon = position['longitude'];
-
-      if (lat == null || lon == null) continue;
-
-      final address = await geocodeService.getAddress(lat, lon);
-
-      devicesList[i] = device.copyWith(attributes: device.attributes.copyWith(address: address));
-    }
-    vehicles.list.refresh();
   }
 
   // =======================
@@ -161,8 +117,6 @@ class HomeController extends GetxController {
       errorMessage.value = 'Erro ao enviar comando';
     } finally {
       vehicles.list[index].loading.value = false;
-      // vehicles.list.refresh();
-      // refreshStatus();
     }
   }
 }

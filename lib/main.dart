@@ -31,6 +31,12 @@ void main() async {
     frequency: Duration(minutes: Constants.minFrequencyWorkmanager),
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
+
+  Workmanager().registerOneOffTask(
+    "trip_manual",
+    Constants.taskTripAlert,
+  );
+
   final launchDetails = await notificationService.getLaunchDetails();
   await notificationService.requestPermission();
 

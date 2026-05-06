@@ -5,7 +5,6 @@ import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
-import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:get/get.dart';
 

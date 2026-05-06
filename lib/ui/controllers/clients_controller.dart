@@ -1,6 +1,7 @@
 // lib/features/clients/controller/clients_admin_controller.dart
 import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/app/services/traccar_service.dart';
+import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/services/remainder_messenger_service.dart';
 import 'package:app_tracking/data/client_state.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
@@ -74,8 +75,12 @@ class ClientsAdminController extends GetxController {
 
     if (success) {
       loadClients();
-      String message = messageServiceWhatsApp.buildCongratulationMessage(client);
-      sendMessage(client, message);
+      try {
+        final message = messageServiceWhatsApp.buildCongratulationMessage(client);
+        await sendMessage(client, message);
+      } on BillingConfigException catch (e) {
+        _showBillingConfigError(e.message);
+      }
     }
   }
 
@@ -83,20 +88,35 @@ class ClientsAdminController extends GetxController {
     final days = client.daysToExpire;
     late String message;
 
-    if (days > 0) {
-      message = messageServiceWhatsApp.buildMessage(client, ReminderType.before);
-    } else if (days == 0) {
-      message = messageServiceWhatsApp.buildMessage(client, ReminderType.dueToday);
-    } else {
-      message = messageServiceWhatsApp.buildMessage(client, ReminderType.overdue);
+    try {
+      if (days > 0) {
+        message = messageServiceWhatsApp.buildMessage(client, ReminderType.before);
+      } else if (days == 0) {
+        message = messageServiceWhatsApp.buildMessage(client, ReminderType.dueToday);
+      } else {
+        message = messageServiceWhatsApp.buildMessage(client, ReminderType.overdue);
+      }
+    } on BillingConfigException catch (e) {
+      _showBillingConfigError(e.message);
+      return;
     }
-    sendMessage(client, message);
+
+    await sendMessage(client, message);
   }
 
-  sendMessage(ClientModel client, String message) async {
-    final phoneClient = client.phone ?? '92991200872';
+  Future<void> sendMessage(ClientModel client, String message) async {
+    final phoneClient = client.phone;
+    if (phoneClient == null || phoneClient.trim().isEmpty) {
+      Get.snackbar('Telefone não encontrado', 'Informe o telefone do cliente antes de enviar a mensagem.');
+      return;
+    }
 
     final phone = phoneClient.replaceAll(RegExp(r'\D'), '');
+    if (phone.isEmpty) {
+      Get.snackbar('Telefone inválido', 'O telefone do cliente não possui números válidos.');
+      return;
+    }
+
     final encoded = Uri.encodeComponent(message);
 
     final uri = Uri.parse('https://wa.me/55$phone?text=$encoded');
@@ -106,5 +126,19 @@ class ClientsAdminController extends GetxController {
     } else {
       // markClientAsNotified(client);
     }
+  }
+
+  void _showBillingConfigError(String message) {
+    Get.defaultDialog(
+      title: 'Configuração incompleta',
+      middleText: '$message\n\nDeseja abrir as configurações de cobrança agora?',
+      textCancel: 'Agora não',
+      textConfirm: 'Configurar',
+      onCancel: () => Get.back(),
+      onConfirm: () {
+        Get.back();
+        Get.toNamed(Routes.BILLING_CONFIG);
+      },
+    );
   }
 }

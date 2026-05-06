@@ -27,17 +27,52 @@ class ClientModel {
       name: map['name'],
       email: map['email'],
       phone: map['phone'],
-      contractStart: map['contractStart'] != null ? DateTime.tryParse(map['contractStart']) : null,
-      expiresAt: map['expiresAt'] != null ? DateTime.tryParse(map['expiresAt']) : null,
+      contractStart: _parseBillingDate(map['contractStart']),
+      expiresAt: _parseBillingDate(map['expiresAt']),
       notified: map['notified'] ?? false,
     );
+  }
+
+  ClientModel copyWith({
+    String? name,
+    String? phone,
+    DateTime? contractStart,
+    DateTime? expiresAt,
+    bool? notified,
+    String? email,
+    List<DeviceModel>? devices,
+  }) {
+    return ClientModel(
+      id: id,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      contractStart: contractStart ?? this.contractStart,
+      expiresAt: expiresAt ?? this.expiresAt,
+      notified: notified ?? this.notified,
+      email: email ?? this.email,
+      devices: devices ?? this.devices,
+    );
+  }
+
+  static DateTime? _parseBillingDate(dynamic value) {
+    if (value == null) return null;
+
+    final parsed = DateTime.tryParse(value.toString());
+    if (parsed == null) return null;
+
+    final date = parsed.isUtc ? parsed.toUtc() : parsed;
+    return DateTime(date.year, date.month, date.day);
   }
 
   int get daysToExpire {
     if (expiresAt == null) return 9999;
 
-    final diff = expiresAt!.difference(DateTime.now());
-    return (diff.inHours / 24).ceil();
+    final expiration = expiresAt!.toLocal();
+    final expirationDate = DateTime(expiration.year, expiration.month, expiration.day);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    return expirationDate.difference(today).inDays;
   }
 }
 

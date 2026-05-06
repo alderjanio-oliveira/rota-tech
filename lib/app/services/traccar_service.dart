@@ -235,7 +235,7 @@ class TraccarService extends GetxService {
         'email': u['email'],
         'phone': u['phone'],
         'contractStart': attributes['contractStart'],
-        'expiresAt': u['expirationTime'],
+        'expiresAt': attributes['expiresAt'] ?? u['expirationTime'],
         'notified': attributes['notified'] ?? false,
       };
     }).toList();
@@ -249,29 +249,49 @@ class TraccarService extends GetxService {
 
     final List data = json.decode(response.body);
 
-    return data.map<Map<String, dynamic>>((u) {
-      return {
-        'userId': u['userId'],
-        'devices': u['devices'] ?? [],
-      };
-    }).toList();
+    final permissions = <Map<String, dynamic>>[];
+
+    for (final item in data) {
+      final userId = _toInt(item['userId']);
+      final deviceId = _toInt(item['deviceId']);
+
+      if (userId != null && deviceId != null) {
+        permissions.add({'userId': userId, 'deviceId': deviceId});
+      }
+
+      final devices = item['devices'];
+      if (userId != null && devices is List) {
+        for (final device in devices) {
+          final id = device is Map ? _toInt(device['id']) : _toInt(device);
+          if (id != null) {
+            permissions.add({'userId': userId, 'deviceId': id});
+          }
+        }
+      }
+    }
+
+    return permissions;
   }
 
   Future<bool> renewClientContract(ClientModel client) async {
     final newExpireDate = DateTime(client.expiresAt!.year, client.expiresAt!.month + 1, client.expiresAt!.day);
 
-    final url = Uri.parse('$baseUrl/users/${session.userId.value}');
+    final url = Uri.parse('$baseUrl/users/${client.id}');
+    final userResponse = await http.get(url, headers: _buildHeaders());
+    if (userResponse.statusCode != 200) return false;
+
+    final Map<String, dynamic> userData = json.decode(userResponse.body);
+    final attributes = Map<String, dynamic>.from(userData['attributes'] ?? {});
+    attributes['expiresAt'] = _formatDateOnly(newExpireDate);
+    attributes['notified'] = false;
+
+    userData['expirationTime'] = DateTime.utc(newExpireDate.year, newExpireDate.month, newExpireDate.day, 23, 59, 59).toIso8601String();
+    userData['attributes'] = attributes;
 
     final response = await http.put(
       url,
       headers: _buildHeaders(),
-      body: json.encode({
-        'id': client.id,
-        'email': client.email,
-        'name': client.name,
-        'expirationTime': newExpireDate.toIso8601String(),
-        'attributes': {'expiresAt': newExpireDate.toIso8601String(), 'notified': false},
-      }),
+      body: json.encode(userData),
     );
 
     return response.statusCode == 200;
@@ -313,5 +333,18 @@ class TraccarService extends GetxService {
     );
 
     return response.statusCode == 200;
+  }
+
+  String _formatDateOnly(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+
+    return '${date.year}-$month-$day';
+  }
+
+  int? _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 }

@@ -1,18 +1,14 @@
 import 'package:app_tracking/app/services/reverse_geocode_service.dart';
-import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/app/services/vehicle_services.dart';
-import 'package:app_tracking/core/bindings/main.binding.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/auth_service.dart';
 import 'package:app_tracking/core/services/auth_storage_service.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
-import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:workmanager/workmanager.dart';
 

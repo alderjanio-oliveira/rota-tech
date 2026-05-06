@@ -31,11 +31,11 @@ class ClientsAdminPage extends StatelessWidget {
           if (controller.filter.value == 'todos') return matchSearch;
 
           if (controller.filter.value == 'vencidos') {
-            return matchSearch && c.daysToExpire <= 0;
+            return matchSearch && c.daysToExpire < 0;
           }
 
           if (controller.filter.value == 'ativos') {
-            return matchSearch && c.daysToExpire > 0;
+            return matchSearch && c.daysToExpire >= 0;
           }
 
           return true;
@@ -124,8 +124,8 @@ class _KpiHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = clients.length;
-    final ativos = clients.where((c) => c.daysToExpire > 0).length;
-    final vencidos = clients.where((c) => c.daysToExpire <= 0).length;
+    final ativos = clients.where((c) => c.daysToExpire >= 0).length;
+    final vencidos = clients.where((c) => c.daysToExpire < 0).length;
 
     return Row(
       children: [
@@ -211,7 +211,7 @@ class _ClientCard extends StatelessWidget {
   });
 
   Color _statusColor(int days) {
-    if (days <= 0) return Colors.red;
+    if (days < 0) return Colors.red;
     if (days <= 5) return Colors.orange;
     return Colors.green;
   }
@@ -242,7 +242,7 @@ class _ClientCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  days.toString(),
+                  days == 0 ? 'Hoje' : days.toString(),
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.bold,

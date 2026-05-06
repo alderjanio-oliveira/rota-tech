@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
   // final TraccarService traccarService = TraccarService();
   final String? notificationPayload;
 
-  MyApp({super.key, this.notificationPayload});
+  const MyApp({super.key, this.notificationPayload});
 
   @override
   Widget build(BuildContext context) {

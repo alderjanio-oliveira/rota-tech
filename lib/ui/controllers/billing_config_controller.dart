@@ -1,5 +1,6 @@
 import 'package:app_tracking/core/services/local_billing_config_service.dart';
 import 'package:app_tracking/ui/model/billing_config_model.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class BillingConfigController extends GetxController {
@@ -11,6 +12,8 @@ class BillingConfigController extends GetxController {
   final pixKey = ''.obs;
   final pixKeyType = PixKeyType.cpf.obs;
   final price = 0.0.obs;
+  final dailyInterestPercent = 1.5.obs;
+  final clientInfoMessageController = TextEditingController();
 
   @override
   void onInit() {
@@ -21,13 +24,35 @@ class BillingConfigController extends GetxController {
       pixKey.value = config.pixKey;
       pixKeyType.value = config.pixKeyType;
       price.value = config.price;
+      dailyInterestPercent.value = config.dailyInterestPercent;
+      clientInfoMessageController.text = config.clientInfoMessage;
+    } else {
+      clientInfoMessageController.text = BillingConfig.defaultClientInfoMessage;
     }
+  }
+
+  @override
+  void onClose() {
+    clientInfoMessageController.dispose();
+    super.onClose();
   }
 
   void save() {
     service.saveBillingConfig(
-      BillingConfig(companyName: companyName.value, pixKey: pixKey.value, pixKeyType: pixKeyType.value, price: price.value),
+      BillingConfig(
+        companyName: companyName.value,
+        pixKey: pixKey.value,
+        pixKeyType: pixKeyType.value,
+        price: price.value,
+        dailyInterestPercent: dailyInterestPercent.value,
+        clientInfoMessage: clientInfoMessageController.text,
+      ),
     );
     Get.snackbar('Sucesso', 'Configurações salvas');
+  }
+
+  void resetClientInfoMessage() {
+    clientInfoMessageController.text = BillingConfig.defaultClientInfoMessage;
+    Get.snackbar('Mensagem restaurada', 'A mensagem padrão foi restaurada.');
   }
 }

@@ -6,6 +6,7 @@ import 'package:app_tracking/ui/controllers/auth_controller.dart';
 import 'package:app_tracking/ui/controllers/home_controller.dart';
 import 'package:app_tracking/ui/molecules/device_card/device_card.dart';
 import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
+import 'package:app_tracking/ui/molecules/notification_bell.dart';
 import 'package:app_tracking/ui/pages/home/widgets/egine_action_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -19,6 +20,7 @@ class HomePage extends GetView<HomeController> {
       appBar: AppBar(
         title: const Text('Dispositivos'),
         actions: [
+          const NotificationBell(),
           IconButton(onPressed: () => Get.toNamed(Routes.MAP), icon: Icon(Icons.map)),
           IconButton(icon: const Icon(Icons.refresh), onPressed: controller.loadDevices),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),

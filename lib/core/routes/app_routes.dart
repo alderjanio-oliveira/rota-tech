@@ -8,6 +8,7 @@ abstract class Routes {
   static const VEHICLE_DETAILS = '/vehicle/details';
   static const CLIENTS = '/admin/clients';
   static const TRIP_DETAILS = '/tripDetails';
+  static const NOTIFICATIONS = '/notifications';
   static const NOTIFICATION_CONFIG = '/notification/config';
   static const CLIENTS_DETAILS = '/admin/clients/details';
 }

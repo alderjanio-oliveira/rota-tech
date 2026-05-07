@@ -1,7 +1,7 @@
 import 'package:app_tracking/core/routes/app_routes.dart';
+import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app_tracking/core/services/user_session_service.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -15,10 +15,7 @@ class AppDrawer extends StatelessWidget {
         child: Column(
           children: [
             _buildHeader(),
-
             _drawerItem(icon: Icons.motorcycle, title: 'Dispositivos', onTap: () => Get.offAllNamed(Routes.HOME)),
-
-            // 🔒 SOMENTE ADMIN
             Obx(() {
               if (!session.isAdmin.value) return const SizedBox.shrink();
 
@@ -28,21 +25,19 @@ class AppDrawer extends StatelessWidget {
                 onTap: () => Get.toNamed(Routes.CLIENTS),
               );
             }),
-
             Obx(() {
               if (!session.isAdmin.value) return const SizedBox();
 
-              return ListTile(
-                leading: const Icon(Icons.settings),
-                title: const Text('Configurações'),
+              return _drawerItem(
+                icon: Icons.settings,
+                title: 'Configurações',
                 onTap: () => Get.toNamed(Routes.BILLING_CONFIG),
               );
             }),
             _drawerItem(icon: Icons.trip_origin, title: 'Kms rodados', onTap: () => Get.toNamed(Routes.TRIP_DETAILS)),
-            _drawerItem(icon: Icons.settings, title: 'Notificações', onTap: () => Get.toNamed(Routes.NOTIFICATION_CONFIG)),
-
+            _drawerItem(icon: Icons.notifications_outlined, title: 'Notificações', onTap: () => Get.toNamed(Routes.NOTIFICATIONS)),
+            _drawerItem(icon: Icons.settings, title: 'Config. notificações', onTap: () => Get.toNamed(Routes.NOTIFICATION_CONFIG)),
             const Spacer(),
-
             _drawerItem(
               icon: Icons.logout,
               title: 'Sair',
@@ -57,11 +52,11 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    return DrawerHeader(
-      decoration: const BoxDecoration(color: Colors.black87),
+    return const DrawerHeader(
+      decoration: BoxDecoration(color: Colors.black87),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Icon(Icons.admin_panel_settings, color: Colors.white, size: 36),
           SizedBox(height: 12),
           Text('Painel Administrativo', style: TextStyle(color: Colors.white, fontSize: 18)),

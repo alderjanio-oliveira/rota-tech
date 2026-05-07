@@ -2,6 +2,7 @@
 import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/bindings/main.binding.dart';
 import 'package:app_tracking/core/i18n/translation.dart';
+import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/routes/routes.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
@@ -80,6 +81,7 @@ class MyApp extends StatelessWidget {
 
   choiseFirstPage(data) {
     if (data == true) {
+      if (notificationPayload != null) return const NotificationsLaunchPage();
       if (Get.isRegistered<WarningController>()) return TripDetailsPage();
       return HomePage();
     } else {
@@ -99,5 +101,18 @@ class MyApp extends StatelessWidget {
       }
     }
     return false;
+  }
+}
+
+class NotificationsLaunchPage extends StatelessWidget {
+  const NotificationsLaunchPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.offAllNamed(Routes.NOTIFICATIONS);
+    });
+
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

@@ -156,8 +156,7 @@ class LoginPage extends StatelessWidget {
     if (success) {
       if (notificationPayload != null) {
         return Get.offAllNamed(
-          Routes.TRIP_DETAILS,
-          arguments: notificationPayload,
+          Routes.NOTIFICATIONS,
         );
       }
       Get.offAllNamed(Routes.HOME);

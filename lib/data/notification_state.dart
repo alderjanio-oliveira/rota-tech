@@ -12,7 +12,6 @@ class NotificationState {
   final RxList<AppNotificationModel> notifications = <AppNotificationModel>[].obs;
   final RxInt unreadCount = 0.obs;
   final NoticationConfigService _service = NoticationConfigService();
-  final AppNotificationStore _notificationStore = AppNotificationStore();
 
   NotificationState() {
     ever(isEnabled, (value) => print("Notification enabled: $value"));
@@ -33,19 +32,19 @@ class NotificationState {
     }
   }
 
-  void loadNotifications() {
-    final data = _notificationStore.all();
+  Future<void> loadNotifications() async {
+    final data = await AppNotificationStore().all();
     notifications.assignAll(data);
     unreadCount.value = data.where((notification) => !notification.read).length;
   }
 
-  void markAllRead() {
-    _notificationStore.markAllRead();
-    loadNotifications();
+  Future<void> markAllRead() async {
+    await AppNotificationStore().markAllRead();
+    await loadNotifications();
   }
 
-  void clearNotifications() {
-    _notificationStore.clear();
-    loadNotifications();
+  Future<void> clearNotifications() async {
+    await AppNotificationStore().clear();
+    await loadNotifications();
   }
 }

@@ -9,7 +9,7 @@ class NotificationBell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = Get.find<NotificationState>();
-    state.loadNotifications();
+    Future.microtask(state.loadNotifications);
 
     return Obx(() {
       final count = state.unreadCount.value;

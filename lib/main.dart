@@ -1,5 +1,4 @@
 // lib/main.dart
-import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/bindings/main.binding.dart';
 import 'package:app_tracking/core/i18n/translation.dart';
 import 'package:app_tracking/core/routes/app_routes.dart';

@@ -10,7 +10,10 @@ class NotificationsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = Get.find<NotificationState>();
-    WidgetsBinding.instance.addPostFrameCallback((_) => state.markAllRead());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await state.loadNotifications();
+      await state.markAllRead();
+    });
 
     return AppScaffold(
       appBar: AppBar(
@@ -18,8 +21,13 @@ class NotificationsPage extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Limpar',
-            onPressed: state.clearNotifications,
+            onPressed: () => state.clearNotifications(),
             icon: const Icon(Icons.delete_outline),
+          ),
+          IconButton(
+            tooltip: 'Atualizar',
+            onPressed: () => state.loadNotifications(),
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),

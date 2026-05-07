@@ -1,5 +1,6 @@
 // lib/ui/pages/login/login_page.dart
 import 'package:app_tracking/core/routes/app_routes.dart';
+import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/ui/atoms/button/primary.dart';
 import 'package:app_tracking/ui/atoms/inputs/text_input_field.dart';
 import 'package:app_tracking/ui/controllers/auth_controller.dart';
@@ -154,7 +155,8 @@ class LoginPage extends StatelessWidget {
     );
 
     if (success) {
-      if (notificationPayload != null) {
+      final pendingRoute = NotificationService.consumePendingNavigation();
+      if (notificationPayload != null || pendingRoute != null) {
         return Get.offAllNamed(
           Routes.NOTIFICATIONS,
         );

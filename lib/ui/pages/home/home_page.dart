@@ -21,6 +21,11 @@ class HomePage extends GetView<HomeController> {
         title: const Text('Dispositivos'),
         actions: [
           const NotificationBell(),
+          IconButton(
+            tooltip: 'Testar notificações',
+            onPressed: controller.triggerNotificationWorkerTest,
+            icon: const Icon(Icons.bug_report_outlined),
+          ),
           IconButton(onPressed: () => Get.toNamed(Routes.MAP), icon: Icon(Icons.map)),
           IconButton(icon: const Icon(Icons.refresh), onPressed: controller.loadDevices),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),

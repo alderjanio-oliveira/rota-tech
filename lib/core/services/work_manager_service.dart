@@ -52,7 +52,7 @@ void callbackDispatcher() {
       await notificationService.init();
 
       final notificationStore = AppNotificationStore();
-      final activeTripAlerts = notificationStore.activeTripAlerts();
+      final activeTripAlerts = await notificationStore.activeTripAlerts();
       final nextActiveTripAlerts = <int>{};
       final tripMessages = <String>[];
 
@@ -73,7 +73,7 @@ void callbackDispatcher() {
             tripKm: device.tripKm,
             targetKm: device.attributes.trip?.target,
           );
-          notificationStore.add(notification);
+          await notificationStore.add(notification);
 
           await notificationService.show(
             title: notification.title,
@@ -113,12 +113,12 @@ void callbackDispatcher() {
             remainingKm: remainingKm,
           );
 
-          notificationStore.add(notification);
+          await notificationStore.add(notification);
           tripMessages.add(notification.body);
         }
       }
 
-      notificationStore.saveActiveTripAlerts(nextActiveTripAlerts);
+      await notificationStore.saveActiveTripAlerts(nextActiveTripAlerts);
 
       if (tripMessages.isNotEmpty) {
         await notificationService.show(

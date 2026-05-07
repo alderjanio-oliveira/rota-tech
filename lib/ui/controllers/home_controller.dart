@@ -2,13 +2,17 @@ import 'dart:async';
 
 import 'package:app_tracking/app/services/reverse_geocode_service.dart';
 import 'package:app_tracking/app/services/traccar_service.dart';
+import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
+import 'package:app_tracking/utils/constants.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:workmanager/workmanager.dart';
 
-class HomeController extends GetxController {
+class HomeController extends GetxController with WidgetsBindingObserver {
   final TraccarService traccarService;
   final ReverseGeocodeService geocodeService;
   final VehicleState vehicles;
@@ -34,15 +38,25 @@ class HomeController extends GetxController {
   @override
   void onInit() async {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     await _init();
     _connectSocket();
+    NotificationService.openPendingNavigation();
   }
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     socketService.disconnect();
     super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      NotificationService.openPendingNavigation();
+    }
   }
 
   // =======================
@@ -99,6 +113,15 @@ class HomeController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> triggerNotificationWorkerTest() async {
+    await Workmanager().registerOneOffTask(
+      'trip_manual_home_${DateTime.now().millisecondsSinceEpoch}',
+      Constants.taskTripAlert,
+      initialDelay: const Duration(seconds: 3),
+    );
+    Get.snackbar('Teste agendado', 'O Workmanager vai executar a verificação em alguns segundos.');
   }
 
   // =======================

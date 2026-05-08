@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppNotificationStore {
   static const notificationsKey = 'app_notifications';
   static const activeTripAlertsKey = 'active_trip_alerts';
+  static const mutedDeviceAlertsKey = 'muted_device_alerts';
 
   final SharedPreferencesAsync _prefs;
 
@@ -49,6 +50,15 @@ class AppNotificationStore {
     await _prefs.setString(notificationsKey, jsonEncode([]));
   }
 
+  Future<void> remove(String notificationId) async {
+    final notifications = await all();
+    notifications.removeWhere((item) => item.id == notificationId);
+    await _prefs.setString(
+      notificationsKey,
+      jsonEncode(notifications.map((item) => item.toJson()).toList()),
+    );
+  }
+
   Future<Set<int>> activeTripAlerts() async {
     final raw = await _prefs.getString(activeTripAlertsKey);
     if (raw == null || raw.isEmpty) return <int>{};
@@ -59,5 +69,33 @@ class AppNotificationStore {
 
   Future<void> saveActiveTripAlerts(Set<int> deviceIds) async {
     await _prefs.setString(activeTripAlertsKey, jsonEncode(deviceIds.toList()));
+  }
+
+  Future<void> removeActiveTripAlert(int deviceId) async {
+    final activeAlerts = await activeTripAlerts();
+    activeAlerts.remove(deviceId);
+    await saveActiveTripAlerts(activeAlerts);
+  }
+
+  Future<Set<int>> mutedDeviceAlerts() async {
+    final raw = await _prefs.getString(mutedDeviceAlertsKey);
+    if (raw == null || raw.isEmpty) return <int>{};
+
+    final data = jsonDecode(raw) as List;
+    return data.map((item) => int.tryParse(item.toString())).whereType<int>().toSet();
+  }
+
+  Future<void> saveMutedDeviceAlerts(Set<int> deviceIds) async {
+    await _prefs.setString(mutedDeviceAlertsKey, jsonEncode(deviceIds.toList()));
+  }
+
+  Future<void> toggleMutedDevice(int deviceId) async {
+    final mutedDevices = await mutedDeviceAlerts();
+    if (mutedDevices.contains(deviceId)) {
+      mutedDevices.remove(deviceId);
+    } else {
+      mutedDevices.add(deviceId);
+    }
+    await saveMutedDeviceAlerts(mutedDevices);
   }
 }

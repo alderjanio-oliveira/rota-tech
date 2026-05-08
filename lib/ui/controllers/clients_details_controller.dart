@@ -28,14 +28,13 @@ class ClientsDetailsController extends GetxController {
   final Rxn<DateTime> expiresAt = Rxn<DateTime>();
   final RxString clientName = ''.obs;
   final RxSet<int> linkedDeviceIds = <int>{}.obs;
+  final RxList<DeviceModel> linkedDevicesList = <DeviceModel>[].obs;
   final RxString vehicleSearch = ''.obs;
   final RxBool isSaving = false.obs;
   final RxBool isLoadingLinks = false.obs;
   final RxBool isLinking = false.obs;
 
-  List<DeviceModel> get linkedDevices {
-    return vehicle.list.where((device) => linkedDeviceIds.contains(device.id)).toList();
-  }
+  List<DeviceModel> get linkedDevices => linkedDevicesList.toList();
 
   List<DeviceModel> get availableDevices {
     final search = vehicleSearch.value.trim().toLowerCase();
@@ -69,7 +68,9 @@ class ClientsDetailsController extends GetxController {
     emailController.text = client.email ?? '';
     phoneController.text = client.phone ?? '';
     expiresAt.value = client.expiresAt;
-    linkedDeviceIds.assignAll(client.devices?.map((device) => device.id) ?? <int>[]);
+    final initialDevices = client.devices ?? <DeviceModel>[];
+    linkedDevicesList.assignAll(initialDevices);
+    linkedDeviceIds.assignAll(initialDevices.map((device) => device.id));
     _ensureVehiclesLoaded();
     loadLinkedDevices();
   }
@@ -102,8 +103,9 @@ class ClientsDetailsController extends GetxController {
   Future<void> loadLinkedDevices() async {
     try {
       isLoadingLinks.value = true;
-      final ids = await clientAdminService.getLinkedDeviceIds(client.id);
-      linkedDeviceIds.assignAll(ids);
+      final devices = await clientAdminService.getLinkedDevices(client.id);
+      linkedDevicesList.assignAll(devices);
+      linkedDeviceIds.assignAll(devices.map((device) => device.id));
     } finally {
       isLoadingLinks.value = false;
     }
@@ -218,6 +220,7 @@ class ClientsDetailsController extends GetxController {
 
       if (success) {
         linkedDeviceIds.add(device.id);
+        linkedDevicesList.add(device);
         vehicleSearchController.clear();
         vehicleSearch.value = '';
         Get.snackbar('Sucesso', 'Veículo vinculado ao cliente.');
@@ -250,6 +253,7 @@ class ClientsDetailsController extends GetxController {
 
       if (success) {
         linkedDeviceIds.remove(device.id);
+        linkedDevicesList.removeWhere((item) => item.id == device.id);
         Get.snackbar('Sucesso', 'Vínculo removido.');
       } else {
         Get.snackbar('Erro', 'Falha ao remover vínculo.');

@@ -53,6 +53,7 @@ void callbackDispatcher() {
 
       final notificationStore = AppNotificationStore();
       final activeTripAlerts = await notificationStore.activeTripAlerts();
+      final mutedDeviceAlerts = await notificationStore.mutedDeviceAlerts();
       final nextActiveTripAlerts = <int>{};
       final tripMessages = <String>[];
 
@@ -60,6 +61,8 @@ void callbackDispatcher() {
       var hasCriticalVehicle = false;
 
       for (final device in vehicleState.list) {
+        if (mutedDeviceAlerts.contains(device.id)) continue;
+
         if (config.chargeAlert && device.attributes.charge != null && !device.attributes.charge!) {
           final notification = AppNotificationModel(
             id: 'charge-${device.id}-${DateTime.now().millisecondsSinceEpoch}',

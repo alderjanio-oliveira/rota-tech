@@ -11,6 +11,7 @@ class NotificationState {
   RxBool tripAlert = false.obs;
   final RxList<AppNotificationModel> notifications = <AppNotificationModel>[].obs;
   final RxInt unreadCount = 0.obs;
+  final RxSet<int> mutedDeviceIds = <int>{}.obs;
   final NoticationConfigService _service = NoticationConfigService();
 
   NotificationState() {
@@ -34,7 +35,9 @@ class NotificationState {
 
   Future<void> loadNotifications() async {
     final data = await AppNotificationStore().all();
+    final muted = await AppNotificationStore().mutedDeviceAlerts();
     notifications.assignAll(data);
+    mutedDeviceIds.assignAll(muted);
     unreadCount.value = data.where((notification) => !notification.read).length;
   }
 
@@ -46,5 +49,24 @@ class NotificationState {
   Future<void> clearNotifications() async {
     await AppNotificationStore().clear();
     await loadNotifications();
+  }
+
+  Future<void> removeNotification(String notificationId) async {
+    await AppNotificationStore().remove(notificationId);
+    await loadNotifications();
+  }
+
+  Future<void> removeActiveTripAlert(int deviceId) async {
+    await AppNotificationStore().removeActiveTripAlert(deviceId);
+  }
+
+  Future<void> toggleMutedDevice(int deviceId) async {
+    await AppNotificationStore().toggleMutedDevice(deviceId);
+    await loadNotifications();
+  }
+
+  bool isDeviceMuted(int? deviceId) {
+    if (deviceId == null) return false;
+    return mutedDeviceIds.contains(deviceId);
   }
 }

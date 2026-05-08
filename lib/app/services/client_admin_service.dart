@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
+import 'package:app_tracking/data/device_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -54,6 +55,15 @@ class ClientAdminService extends GetxService {
       phone: phone.trim(),
       expiresAt: DateTime(expiresAt.year, expiresAt.month, expiresAt.day),
     );
+  }
+
+  Future<List<DeviceModel>> getLinkedDevices(int userId) async {
+    final url = Uri.parse('$baseUrl/devices?userId=$userId&excludeAttributes=true');
+    final response = await http.get(url, headers: _buildHeaders());
+    if (response.statusCode != 200) return <DeviceModel>[];
+
+    final List data = json.decode(response.body);
+    return data.map<DeviceModel>((item) => DeviceModel.fromJson(item as Map<String, dynamic>)).toList();
   }
 
   Future<Set<int>> getLinkedDeviceIds(int userId) async {

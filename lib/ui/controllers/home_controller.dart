@@ -24,6 +24,14 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
+  /// Alterna entre a lista de devices e o mapa na Home.
+  final RxBool isMapView = false.obs;
+
+  /// Texto de busca — filtra a lista e, quando casa com um único device,
+  /// centraliza o mapa nele.
+  final RxString search = ''.obs;
+  final TextEditingController searchController = TextEditingController();
+
   Timer? _timer;
 
   HomeController({
@@ -49,6 +57,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     socketService.disconnect();
+    searchController.dispose();
     super.onClose();
   }
 
@@ -59,17 +68,26 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     }
   }
 
+  void toggleMapView() {
+    isMapView.value = !isMapView.value;
+  }
+
+  void clearSearch() {
+    searchController.clear();
+    search.value = '';
+  }
+
+  void selectSearchSuggestion(String deviceName) {
+    searchController.text = deviceName;
+    search.value = deviceName;
+  }
+
   // =======================
   // SOCKET
   // =======================
 
   void _connectSocket() {
-    if (socketService.isConnected) return;
-
-    socketService.connect(
-      onData: _onSocketData,
-      onError: (e) => print('WS erro: $e'),
-    );
+    socketService.connect(onData: _onSocketData, onError: (e) => print('WS erro: $e'));
   }
 
   void _onSocketData(Map<String, dynamic> data) {
@@ -107,10 +125,14 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     try {
       isLoading.value = true;
       errorMessage.value = '';
-      vehicles.load();
+      await vehicles.loadDevices();
+      isLoading.value = false;
+
+      // Posição e endereço continuam carregando com a lista já na tela
+      // (cards em skeleton até cada um ser preenchido).
+      await vehicles.loadPositionsAndAddresses();
     } catch (e) {
       errorMessage.value = 'Erro ao carregar dispositivos';
-    } finally {
       isLoading.value = false;
     }
   }

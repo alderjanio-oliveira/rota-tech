@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:app_tracking/app/services/reverse_geocode_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
-import 'package:app_tracking/data/device_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -43,24 +42,6 @@ class VehicleServices extends GetxService {
     final List list = json.decode(response.body);
 
     return {for (var p in list) p['deviceId']: p};
-  }
-
-  Future<void> loadAddresses(List<DeviceModel> devicesList, Map<int, dynamic> positions) async {
-    for (int i = 0; i < devicesList.length; i++) {
-      final device = devicesList[i];
-      final position = positions[device.id];
-
-      if (position == null) continue;
-      if (device.attributes.address != null && device.attributes.address!.isNotEmpty) continue;
-      final lat = position['latitude'];
-      final lon = position['longitude'];
-
-      if (lat == null || lon == null) continue;
-
-      final address = await geocodeService.getAddress(lat, lon);
-
-      devicesList[i] = device.copyWith(attributes: device.attributes.copyWith(address: address));
-    }
   }
 
   Map<String, String> _buildHeaders() {

@@ -8,12 +8,18 @@ class DeviceModel {
   final int? lastPositionId;
   final RxBool loading = false.obs;
 
+  /// Indica se já sabemos a posição/última leitura do device (usado para
+  /// trocar o skeleton pelo card real na listagem), independente do device
+  /// ter ou não uma posição de fato disponível no servidor.
+  final bool positionLoaded;
+
   DeviceModel({
     required this.id,
     required this.name,
     required this.status,
     required this.attributes,
     this.lastPositionId,
+    this.positionLoaded = false,
   });
 
   factory DeviceModel.fromJson(Map<String, dynamic> json) {
@@ -26,13 +32,14 @@ class DeviceModel {
     );
   }
 
-  DeviceModel copyWith({DeviceAttributes? attributes, int? lastPositionId}) {
+  DeviceModel copyWith({DeviceAttributes? attributes, int? lastPositionId, bool? positionLoaded}) {
     return DeviceModel(
       id: id,
       name: name,
       status: status,
       attributes: attributes ?? this.attributes,
       lastPositionId: lastPositionId ?? this.lastPositionId,
+      positionLoaded: positionLoaded ?? this.positionLoaded,
     );
   }
 
@@ -77,8 +84,21 @@ class DeviceAttributes {
       charge: json['charge'],
       totalDistance: json['totalDistance']?.toDouble(),
       address: json['address'],
-      trip: json['trip'] != null ? Trip.fromJson(json['trip']) : null,
+      trip: _parseTrip(json['trip']),
     );
+  }
+
+  /// O servidor às vezes retorna `trip` como um único objeto e às vezes como
+  /// uma lista de trips (histórico de resets); nesse caso usamos o ativo.
+  static Trip? _parseTrip(dynamic raw) {
+    if (raw is Map<String, dynamic>) return Trip.fromJson(raw);
+    if (raw is List) {
+      final trips = raw.whereType<Map<String, dynamic>>();
+      if (trips.isEmpty) return null;
+      final active = trips.firstWhere((t) => t['active'] == true, orElse: () => trips.first);
+      return Trip.fromJson(active);
+    }
+    return null;
   }
 
   DeviceAttributes copyWith({bool? ignition, RxnBool? lockState, bool? charge, double? totalDistance, String? address, Trip? trip}) {

@@ -1,16 +1,45 @@
-# lock_master
+# Rota Tech
 
-A new Flutter project.
+## Primeiros passos
 
-## Getting Started
+Passo a passo para rodar o app localmente logo após o `git clone`.
 
-This project is a starting point for a Flutter application.
+### 1. Pré-requisitos
 
-A few resources to get you started if this is your first Flutter project:
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) `^3.8.1` (channel stable)
+- Um emulador/simulador (Android ou iOS) ou dispositivo físico, ou Chrome para rodar em modo web
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Verifique se o ambiente está configurado corretamente:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```
+flutter doctor
+```
+
+### 2. Instalar as dependências
+
+```
+flutter pub get
+```
+
+### 3. Configurar variáveis de ambiente
+
+Copie o arquivo de exemplo e ajuste os valores conforme necessário:
+
+```
+cp .env.example .env
+```
+
+- `BASEURL`: endereço base da API
+- `SOCKET_URL`: endereço do servidor de websocket
+
+### 4. Rodar o projeto
+
+```
+flutter run
+```
+
+## Testes
+
+```
+flutter test
+```

@@ -47,7 +47,7 @@ class MapCustomController extends GetxController {
 
   @override
   void onClose() {
-    socketService.disconnect();
+    socketService.removeListener(_onSocketData);
 
     for (var engine in _motionEngines.values) {
       engine.dispose();

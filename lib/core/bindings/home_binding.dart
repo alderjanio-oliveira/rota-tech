@@ -1,11 +1,13 @@
 import 'package:app_tracking/app/services/reverse_geocode_service.dart';
 import 'package:app_tracking/app/services/traccar_service.dart';
+import 'package:app_tracking/core/config/map_tracking_config.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/ui/controllers/home_controller.dart';
+import 'package:app_tracking/ui/controllers/map_controller.dart';
 import 'package:get/get.dart';
 
 class HomeBinding implements Bindings {
@@ -16,6 +18,14 @@ class HomeBinding implements Bindings {
     Get.lazyPut<PositionEventHandler>(() => PositionEventHandler(Get.find<NotificationService>()));
     Get.lazyPut<TraccarService>(() => TraccarService());
     Get.lazyPut<ReverseGeocodeService>(() => ReverseGeocodeService());
+    Get.lazyPut<MapCustomController>(
+      () => MapCustomController(
+        Get.find<TraccarService>(),
+        Get.find<TraccarWebSocketService>(),
+        MapTrackingConfig(mode: TrailMode.byPoints, value: 2000),
+        Get.find<VehicleState>(),
+      ),
+    );
     Get.lazyPut<HomeController>(
       () => HomeController(
         geocodeService: Get.find<ReverseGeocodeService>(),

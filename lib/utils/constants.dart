@@ -8,9 +8,10 @@ class Constants {
 
   static const String notificationKey = "notification_payload";
   static const int minFrequencyWorkmanager = 60 * 24; // 24 horas
-  static const int tripAlertCriticalKm = 100;
-  static const int tripAlertWarningKm = 300;
-  static const int tripAlertCriticalFrequencyMinutes = 60;
-  static const int tripAlertWarningFrequencyMinutes = 180;
+
+  /// A partir de quantos km restantes a checagem passa a rodar por hora
+  /// (antes disso, roda 1x por dia).
+  static const int tripAlertHourlyThresholdKm = 200;
+  static const int tripAlertHourlyFrequencyMinutes = 60;
   static const int tripAlertNormalFrequencyMinutes = 60 * 24;
 }

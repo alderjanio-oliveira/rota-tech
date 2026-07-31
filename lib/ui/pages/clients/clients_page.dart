@@ -25,21 +25,22 @@ class ClientsAdminPage extends StatelessWidget {
         /// 🔥 FILTROS LOCAIS (simples e eficiente)
         final search = controller.search.value.toLowerCase();
 
-        final filtered = controller.clients.list.where((c) {
-          final matchSearch = c.name.toLowerCase().contains(search);
+        final filtered =
+            controller.clients.list.where((c) {
+              final matchSearch = c.name.toLowerCase().contains(search);
 
-          if (controller.filter.value == 'todos') return matchSearch;
+              if (controller.filter.value == 'todos') return matchSearch;
 
-          if (controller.filter.value == 'vencidos') {
-            return matchSearch && c.daysToExpire < 0;
-          }
+              if (controller.filter.value == 'vencidos') {
+                return matchSearch && c.daysToExpire < 0;
+              }
 
-          if (controller.filter.value == 'ativos') {
-            return matchSearch && c.daysToExpire >= 0;
-          }
+              if (controller.filter.value == 'ativos') {
+                return matchSearch && c.daysToExpire >= 0;
+              }
 
-          return true;
-        }).toList();
+              return true;
+            }).toList();
 
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -55,9 +56,7 @@ class ClientsAdminPage extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Buscar cliente...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
 
@@ -78,10 +77,7 @@ class ClientsAdminPage extends StatelessWidget {
             ...filtered.map((client) {
               return _ClientCard(
                 client: client,
-                onTap: () => Get.toNamed(
-                  Routes.CLIENTS_DETAILS,
-                  arguments: client,
-                ),
+                onTap: () => Get.toNamed(Routes.CLIENTS_DETAILS, arguments: client),
                 onWhats: () => controller.sendWhatsAppReminder(client),
                 onRenew: () => _confirmRenew(context, controller, client),
               );
@@ -99,10 +95,7 @@ class ClientsAdminPage extends StatelessWidget {
         title: const Text("Confirmar renovação"),
         content: Text("Deseja renovar o contrato de ${client.name}?"),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Cancelar"),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text("Cancelar")),
           ElevatedButton(
             onPressed: () {
               Get.back();
@@ -150,20 +143,10 @@ class _KpiBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: color.withOpacity(0.1),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: color.withOpacity(0.1)),
       child: Column(
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: color,
-            ),
-          ),
+          Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(fontSize: 12)),
         ],
@@ -187,11 +170,7 @@ class _FilterChip extends StatelessWidget {
 
       return Padding(
         padding: const EdgeInsets.only(right: 8),
-        child: ChoiceChip(
-          label: Text(label),
-          selected: selected,
-          onSelected: (_) => controller.filter.value = value,
-        ),
+        child: ChoiceChip(label: Text(label), selected: selected, onSelected: (_) => controller.filter.value = value),
       );
     });
   }
@@ -203,12 +182,7 @@ class _ClientCard extends StatelessWidget {
   final VoidCallback onWhats;
   final VoidCallback onRenew;
 
-  const _ClientCard({
-    required this.client,
-    required this.onTap,
-    required this.onWhats,
-    required this.onRenew,
-  });
+  const _ClientCard({required this.client, required this.onTap, required this.onWhats, required this.onRenew});
 
   Color _statusColor(int days) {
     if (days < 0) return Colors.red;
@@ -226,29 +200,15 @@ class _ClientCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).cardColor,
-        ),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Theme.of(context).cardColor),
         child: Row(
           children: [
             /// STATUS
             Container(
               width: 50,
               height: 50,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  days == 0 ? 'Hoje' : days.toString(),
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+              child: Center(child: Text(days == 0 ? 'Hoje' : days.toString(), style: TextStyle(color: color, fontWeight: FontWeight.bold))),
             ),
 
             const SizedBox(width: 12),
@@ -266,6 +226,13 @@ class _ClientCard extends StatelessWidget {
                     client.expiresAt != null ? 'Vence em ${client.expiresAt.toLocal().toString().split(' ').first}' : 'Sem vencimento',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
+
+                  const SizedBox(height: 2),
+
+                  Text(
+                    '${client.deviceCount} veículo${client.deviceCount == 1 ? '' : 's'}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
               ),
             ),
@@ -273,14 +240,8 @@ class _ClientCard extends StatelessWidget {
             /// AÇÕES
             Column(
               children: [
-                IconButton(
-                  onPressed: onWhats,
-                  icon: const Icon(Icons.message),
-                ),
-                IconButton(
-                  onPressed: onRenew,
-                  icon: const Icon(Icons.refresh),
-                ),
+                IconButton(onPressed: onWhats, icon: const Icon(Icons.message)),
+                IconButton(onPressed: onRenew, icon: const Icon(Icons.refresh)),
               ],
             ),
           ],

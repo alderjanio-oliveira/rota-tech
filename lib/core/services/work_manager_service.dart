@@ -28,23 +28,18 @@ void callbackDispatcher() {
       if (!(await canAutoLogin(authStorageService))) return Future.value(true);
 
       final session = UserSessionService();
-      final authService = AuthService(
-        session: session,
-        apiHelper: ApiHelper(session: session),
-      );
+      final authService = AuthService(session: session, apiHelper: ApiHelper(session: session));
       if (!(await login(authStorageService, authService))) return Future.value(true);
 
-      final vehicleServices = VehicleServices(
-        session: session,
-        geocodeService: ReverseGeocodeService(),
-      );
+      final vehicleServices = VehicleServices(session: session, geocodeService: ReverseGeocodeService());
       final vehicleState = VehicleState(vehicleServices: vehicleServices);
       await vehicleState.load();
 
       final configJson = NoticationConfigService().getNotificationConfig();
-      final config = configJson == null ? NotificationConfigModel() : NotificationConfigModel.fromJson(Map<String, dynamic>.from(configJson));
+      final config =
+          configJson == null ? NotificationConfigModel() : NotificationConfigModel.fromJson(Map<String, dynamic>.from(configJson));
       if (!config.isEnabled) {
-        await scheduleNextTripAlert(hasCriticalVehicle: false, hasWarningVehicle: false);
+        await scheduleNextTripAlert(hasNearTargetVehicle: false);
         return Future.value(true);
       }
 
@@ -57,8 +52,7 @@ void callbackDispatcher() {
       final nextActiveTripAlerts = <int>{};
       final tripMessages = <String>[];
 
-      var hasWarningVehicle = false;
-      var hasCriticalVehicle = false;
+      var hasNearTargetVehicle = false;
 
       for (final device in vehicleState.list) {
         if (mutedDeviceAlerts.contains(device.id)) continue;
@@ -78,12 +72,7 @@ void callbackDispatcher() {
           );
           await notificationStore.add(notification);
 
-          await notificationService.show(
-            title: notification.title,
-            body: notification.body,
-            id: device.id,
-            payload: notification.id,
-          );
+          await notificationService.show(title: notification.title, body: notification.body, id: device.id, payload: notification.id);
         }
 
         final targetKm = device.attributes.trip?.target;
@@ -91,22 +80,27 @@ void callbackDispatcher() {
         if (!config.tripAlert || targetKm == null || tripKm == null) continue;
 
         final remainingKm = targetKm - tripKm;
-        if (remainingKm <= Constants.tripAlertWarningKm) {
-          hasWarningVehicle = true;
-          nextActiveTripAlerts.add(device.id);
-        }
-        if (remainingKm <= Constants.tripAlertCriticalKm) {
-          hasCriticalVehicle = true;
+        final reached = remainingKm <= 0;
+
+        // Sobe a cadência pra hora em hora quando algum veículo está perto
+        // da meta — mesmo que ainda não tenha batido.
+        if (remainingKm <= Constants.tripAlertHourlyThresholdKm) {
+          hasNearTargetVehicle = true;
         }
 
-        if (remainingKm <= Constants.tripAlertWarningKm && !activeTripAlerts.contains(device.id)) {
+        if (!reached) continue;
+
+        // Continua marcado como "ativo" enquanto a meta permanecer batida —
+        // só sai desse conjunto (voltando a poder notificar) quando o trip
+        // for zerado/refeito e `reached` virar false num próximo ciclo.
+        nextActiveTripAlerts.add(device.id);
+
+        if (!activeTripAlerts.contains(device.id)) {
           final notification = AppNotificationModel(
             id: 'trip-${device.id}-${DateTime.now().millisecondsSinceEpoch}',
             type: 'trip',
-            title: remainingKm <= 0 ? 'Meta de km atingida' : 'Meta de km próxima',
-            body: remainingKm <= 0
-                ? 'Veículo ${device.name} atingiu ${tripKm.toStringAsFixed(2)} km.'
-                : 'Faltam ${remainingKm.toStringAsFixed(2)} km para ${device.name} atingir a meta.',
+            title: 'Meta de km atingida',
+            body: 'Veículo ${device.name} atingiu ${tripKm.toStringAsFixed(2)} km.',
             createdAt: DateTime.now(),
             deviceId: device.id,
             deviceName: device.name,
@@ -124,31 +118,18 @@ void callbackDispatcher() {
       await notificationStore.saveActiveTripAlerts(nextActiveTripAlerts);
 
       if (tripMessages.isNotEmpty) {
-        await notificationService.show(
-          title: 'Alerta de quilometragem',
-          body: tripMessages.join('\n'),
-          id: 1,
-          payload: 'notifications',
-        );
+        await notificationService.show(title: 'Alerta de quilometragem', body: tripMessages.join('\n'), id: 1, payload: 'notifications');
       }
 
-      await scheduleNextTripAlert(
-        hasCriticalVehicle: hasCriticalVehicle,
-        hasWarningVehicle: hasWarningVehicle,
-      );
+      await scheduleNextTripAlert(hasNearTargetVehicle: hasNearTargetVehicle);
     }
 
     return Future.value(true);
   });
 }
 
-Future<void> scheduleNextTripAlert({
-  required bool hasCriticalVehicle,
-  required bool hasWarningVehicle,
-}) async {
-  final minutes = hasCriticalVehicle
-      ? Constants.tripAlertCriticalFrequencyMinutes
-      : (hasWarningVehicle ? Constants.tripAlertWarningFrequencyMinutes : Constants.tripAlertNormalFrequencyMinutes);
+Future<void> scheduleNextTripAlert({required bool hasNearTargetVehicle}) async {
+  final minutes = hasNearTargetVehicle ? Constants.tripAlertHourlyFrequencyMinutes : Constants.tripAlertNormalFrequencyMinutes;
 
   await Workmanager().registerOneOffTask(
     Constants.taskTripAlertNext,

@@ -35,6 +35,11 @@ class MapCustomController extends GetxController {
   final Map<int, StreamSubscription<LatLng>> _motionSubscriptions = {};
 
   int? _deviceId;
+  List<int>? _deviceIds;
+
+  /// Nome exibido no balão de filtro (ex.: nome do cliente), quando o mapa
+  /// está restrito aos devices de um usuário específico.
+  final RxnString filterLabel = RxnString();
 
   /// Callback para mover câmera
   Function(LatLng position)? onPositionUpdated;
@@ -64,10 +69,20 @@ class MapCustomController extends GetxController {
   // INIT
   // ===============================
 
-  void init({int? deviceId}) {
+  void init({int? deviceId, List<int>? deviceIds, String? filterLabel}) {
     _deviceId = deviceId;
+    _deviceIds = deviceIds;
+    this.filterLabel.value = filterLabel;
     loadDevices();
     _connectSocket();
+  }
+
+  /// Volta pra visualização padrão (todos os devices).
+  void clearFilter() {
+    _deviceId = null;
+    _deviceIds = null;
+    filterLabel.value = null;
+    loadDevices();
   }
 
   // ===============================
@@ -80,20 +95,25 @@ class MapCustomController extends GetxController {
     try {
       final positions = await traccarService.getAllPositions();
 
-      final list = positions.map<DevicePosition>((p) {
-        DeviceModel hasVehicle = vehicle.list.firstWhere((i) => i.id == p['deviceId']);
-        return DevicePosition(
-          id: p['deviceId'],
-          name: hasVehicle.name,
-          latitude: (p['latitude'] as num).toDouble(),
-          longitude: (p['longitude'] as num).toDouble(),
-          ignition: hasVehicle.attributes.ignition ?? p['attributes']?['ignition'] ?? p['attributes']?['motion'] ?? false,
-          totalDistance: (p['attributes']?['totalDistance'] ?? 0).toDouble(),
-          heading: (p['course'] ?? 0).toDouble(),
-        );
-      }).toList();
+      final list =
+          positions.map<DevicePosition>((p) {
+            DeviceModel hasVehicle = vehicle.list.firstWhere((i) => i.id == p['deviceId']);
+            return DevicePosition(
+              id: p['deviceId'],
+              name: hasVehicle.name,
+              latitude: (p['latitude'] as num).toDouble(),
+              longitude: (p['longitude'] as num).toDouble(),
+              ignition: hasVehicle.attributes.ignition ?? p['attributes']?['ignition'] ?? p['attributes']?['motion'] ?? false,
+              totalDistance: (p['attributes']?['totalDistance'] ?? 0).toDouble(),
+              heading: (p['course'] ?? 0).toDouble(),
+              charge: hasVehicle.attributes.charge ?? p['attributes']?['charge'] as bool?,
+              blocked: hasVehicle.attributes.lockState.value ?? p['attributes']?['blocked'] as bool?,
+            );
+          }).toList();
 
-      if (_deviceId != null) {
+      if (_deviceIds != null && _deviceIds!.isNotEmpty) {
+        devices.value = list.where((d) => _deviceIds!.contains(d.id)).toList();
+      } else if (_deviceId != null) {
         devices.value = list.where((d) => d.id == _deviceId).toList();
       } else {
         devices.value = list;
@@ -127,6 +147,27 @@ class MapCustomController extends GetxController {
 
       if (index == -1) continue;
 
+      // Bateria/bloqueio atualizam sempre, mesmo sem mudança de posição.
+      // Reconstrói explícito (não via copyWith) pra aceitar volta a `null`,
+      // que copyWith não conseguiria distinguir de "não informado".
+      final attrs = pos['attributes'] ?? {};
+      final charge = attrs['charge'] as bool?;
+      final blocked = attrs['blocked'] as bool?;
+      final current = devices[index];
+      if (charge != current.charge || blocked != current.blocked) {
+        devices[index] = DevicePosition(
+          id: current.id,
+          name: current.name,
+          latitude: current.latitude,
+          longitude: current.longitude,
+          ignition: current.ignition,
+          totalDistance: current.totalDistance,
+          heading: current.heading,
+          charge: charge,
+          blocked: blocked,
+        );
+      }
+
       final newLat = (pos['latitude'] as num).toDouble();
       final newLng = (pos['longitude'] as num).toDouble();
 
@@ -141,11 +182,7 @@ class MapCustomController extends GetxController {
       }
 
       // Atualiza engine (NÃO atualiza device direto)
-      _motionEngines[deviceId]?.updateRealPosition(
-        newPosition: LatLng(newLat, newLng),
-        heading: heading,
-        speedKmh: speedKmh,
-      );
+      _motionEngines[deviceId]?.updateRealPosition(newPosition: LatLng(newLat, newLng), heading: heading, speedKmh: speedKmh);
     }
   }
 
@@ -205,6 +242,33 @@ class MapCustomController extends GetxController {
 
   void _applyTimeLimit(int deviceId) {
     // Futuramente implementar com timestamp real
+  }
+
+  // ===============================
+  // COMANDOS
+  // ===============================
+
+  /// Bloqueia/desbloqueia o veículo e, se o comando for aceito, já reflete o
+  /// novo estado localmente (mesmo padrão otimista da lista).
+  Future<void> toggleLock(int deviceId, {required bool block}) async {
+    final index = devices.indexWhere((d) => d.id == deviceId);
+    if (index == -1) return;
+
+    final ok = await traccarService.sendCommand(deviceId, block ? 'engineStop' : 'engineResume');
+    if (!ok) return;
+
+    final current = devices[index];
+    devices[index] = DevicePosition(
+      id: current.id,
+      name: current.name,
+      latitude: current.latitude,
+      longitude: current.longitude,
+      ignition: current.ignition,
+      totalDistance: current.totalDistance,
+      heading: current.heading,
+      charge: current.charge,
+      blocked: block,
+    );
   }
 
   // ===============================

@@ -1,10 +1,11 @@
+import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/ui/drawer/scaffold/app_scaffold.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/controllers/clients_details_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-enum _ClientAction { edit, sendClientInfo, sendBilling, sendContractOk }
+enum _ClientAction { edit, sendClientInfo, sendBilling, sendContractOk, viewOnMap }
 
 class ClientsDatailsPage extends GetView<ClientsDetailsController> {
   const ClientsDatailsPage({super.key});
@@ -28,28 +29,28 @@ class ClientsDatailsPage extends GetView<ClientsDetailsController> {
               onSendClientInfo: controller.sendClientInfoMessage,
               onSendBilling: controller.sendBillingMessage,
               onSendContractOk: controller.sendContractOkMessage,
+              onViewOnMap: () => _viewOnMap(linkedDevices, controller.clientName.value),
             ),
             const SizedBox(height: 16),
             _Section(
               title: 'Veículos vinculados',
               trailing: '${linkedDevices.length}',
-              child: controller.isLoadingLinks.value
-                  ? const Padding(
-                      padding: EdgeInsets.all(18),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : linkedDevices.isEmpty
+              child:
+                  controller.isLoadingLinks.value
+                      ? const Padding(padding: EdgeInsets.all(18), child: Center(child: CircularProgressIndicator()))
+                      : linkedDevices.isEmpty
                       ? const _EmptyState(text: 'Nenhum veículo vinculado a este cliente.')
                       : Column(
-                          children: linkedDevices.map((device) {
-                            return _DeviceTile(
-                              device: device,
-                              icon: Icons.link_off,
-                              actionLabel: 'Remover vínculo',
-                              onTap: () => controller.confirmUnlink(device),
-                            );
-                          }).toList(),
-                        ),
+                        children:
+                            linkedDevices.map((device) {
+                              return _DeviceTile(
+                                device: device,
+                                icon: Icons.link_off,
+                                actionLabel: 'Remover vínculo',
+                                onTap: () => controller.confirmUnlink(device),
+                              );
+                            }).toList(),
+                      ),
             ),
             const SizedBox(height: 16),
             _Section(
@@ -59,10 +60,7 @@ class ClientsDatailsPage extends GetView<ClientsDetailsController> {
                   TextField(
                     controller: controller.vehicleSearchController,
                     onChanged: (value) => controller.vehicleSearch.value = value,
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar por nome ou ID',
-                      prefixIcon: Icon(Icons.search),
-                    ),
+                    decoration: const InputDecoration(hintText: 'Buscar por nome ou ID', prefixIcon: Icon(Icons.search)),
                   ),
                   const SizedBox(height: 10),
                   if (controller.vehicleSearch.value.trim().isEmpty)
@@ -71,14 +69,15 @@ class ClientsDatailsPage extends GetView<ClientsDetailsController> {
                     const _EmptyState(text: 'Nenhum veículo encontrado para essa busca.')
                   else
                     Column(
-                      children: availableDevices.map((device) {
-                        return _DeviceTile(
-                          device: device,
-                          icon: Icons.add_link,
-                          actionLabel: 'Vincular veículo',
-                          onTap: () => controller.confirmLink(device),
-                        );
-                      }).toList(),
+                      children:
+                          availableDevices.map((device) {
+                            return _DeviceTile(
+                              device: device,
+                              icon: Icons.add_link,
+                              actionLabel: 'Vincular veículo',
+                              onTap: () => controller.confirmLink(device),
+                            );
+                          }).toList(),
                     ),
                 ],
               ),
@@ -87,6 +86,15 @@ class ClientsDatailsPage extends GetView<ClientsDetailsController> {
         );
       }),
     );
+  }
+
+  void _viewOnMap(List<DeviceModel> devices, String clientName) {
+    if (devices.isEmpty) {
+      Get.snackbar('Nenhum veículo vinculado', 'Vincule ao menos um veículo a este cliente antes de ver no mapa.');
+      return;
+    }
+
+    Get.toNamed(Routes.MAP, arguments: {'deviceIds': devices.map((d) => d.id).toList(), 'label': clientName});
   }
 
   void _openEditSheet(BuildContext context) {
@@ -116,11 +124,7 @@ class ClientsDatailsPage extends GetView<ClientsDetailsController> {
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Fechar',
-                        onPressed: Get.back,
-                        icon: const Icon(Icons.close),
-                      ),
+                      IconButton(tooltip: 'Fechar', onPressed: Get.back, icon: const Icon(Icons.close)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -155,10 +159,7 @@ class ClientsDatailsPage extends GetView<ClientsDetailsController> {
                     borderRadius: BorderRadius.circular(8),
                     onTap: () => controller.pickExpirationDate(context),
                     child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Data de expiração',
-                        prefixIcon: Icon(Icons.event_outlined),
-                      ),
+                      decoration: const InputDecoration(labelText: 'Data de expiração', prefixIcon: Icon(Icons.event_outlined)),
                       child: Text(controller.formatDate(controller.expiresAt.value)),
                     ),
                   ),
@@ -167,13 +168,10 @@ class ClientsDatailsPage extends GetView<ClientsDetailsController> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: controller.isSaving.value ? null : controller.saveClient,
-                      icon: controller.isSaving.value
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save_outlined),
+                      icon:
+                          controller.isSaving.value
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.save_outlined),
                       label: Text(controller.isSaving.value ? 'Salvando...' : 'Salvar alterações'),
                     ),
                   ),
@@ -195,6 +193,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onSendClientInfo;
   final VoidCallback onSendBilling;
   final VoidCallback onSendContractOk;
+  final VoidCallback onViewOnMap;
 
   const _Header({
     required this.name,
@@ -204,12 +203,14 @@ class _Header extends StatelessWidget {
     required this.onSendClientInfo,
     required this.onSendBilling,
     required this.onSendContractOk,
+    required this.onViewOnMap,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = daysToExpire < 0 ? Colors.red : (daysToExpire <= 5 ? Colors.orange : Colors.green);
-    final status = daysToExpire < 0 ? '${daysToExpire.abs()} dias em atraso' : (daysToExpire == 0 ? 'Vence hoje' : '$daysToExpire dias restantes');
+    final status =
+        daysToExpire < 0 ? '${daysToExpire.abs()} dias em atraso' : (daysToExpire == 0 ? 'Vence hoje' : '$daysToExpire dias restantes');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -220,11 +221,7 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: color.withOpacity(0.18),
-            child: Icon(Icons.person, color: color),
-          ),
+          CircleAvatar(radius: 26, backgroundColor: color.withOpacity(0.18), child: Icon(Icons.person, color: color)),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -256,14 +253,19 @@ class _Header extends StatelessWidget {
                     case _ClientAction.sendContractOk:
                       onSendContractOk();
                       break;
+                    case _ClientAction.viewOnMap:
+                      onViewOnMap();
+                      break;
                   }
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: _ClientAction.edit, child: Text('Editar')),
-                  PopupMenuItem(value: _ClientAction.sendClientInfo, child: Text('Enviar contrato')),
-                  PopupMenuItem(value: _ClientAction.sendBilling, child: Text('Enviar cobrança')),
-                  PopupMenuItem(value: _ClientAction.sendContractOk, child: Text('Contrato em dias')),
-                ],
+                itemBuilder:
+                    (_) => const [
+                      PopupMenuItem(value: _ClientAction.edit, child: Text('Editar')),
+                      PopupMenuItem(value: _ClientAction.viewOnMap, child: Text('Ver no mapa')),
+                      PopupMenuItem(value: _ClientAction.sendClientInfo, child: Text('Enviar contrato')),
+                      PopupMenuItem(value: _ClientAction.sendBilling, child: Text('Enviar cobrança')),
+                      PopupMenuItem(value: _ClientAction.sendContractOk, child: Text('Contrato em dias')),
+                    ],
               ),
               Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
             ],
@@ -279,11 +281,7 @@ class _Section extends StatelessWidget {
   final String? trailing;
   final Widget child;
 
-  const _Section({
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
+  const _Section({required this.title, required this.child, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -299,14 +297,8 @@ class _Section extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              ),
-              if (trailing != null)
-                Chip(
-                  label: Text(trailing!),
-                  visualDensity: VisualDensity.compact,
-                ),
+              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+              if (trailing != null) Chip(label: Text(trailing!), visualDensity: VisualDensity.compact),
             ],
           ),
           const SizedBox(height: 12),
@@ -323,12 +315,7 @@ class _DeviceTile extends StatelessWidget {
   final String actionLabel;
   final VoidCallback onTap;
 
-  const _DeviceTile({
-    required this.device,
-    required this.icon,
-    required this.actionLabel,
-    required this.onTap,
-  });
+  const _DeviceTile({required this.device, required this.icon, required this.actionLabel, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -340,11 +327,7 @@ class _DeviceTile extends StatelessWidget {
       ),
       title: Text(device.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text('ID ${device.id} - Status: ${device.status}'),
-      trailing: IconButton(
-        tooltip: actionLabel,
-        onPressed: onTap,
-        icon: Icon(icon),
-      ),
+      trailing: IconButton(tooltip: actionLabel, onPressed: onTap, icon: Icon(icon)),
     );
   }
 }

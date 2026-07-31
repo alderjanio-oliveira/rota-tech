@@ -1,8 +1,10 @@
+import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/app/services/km_report_pdf.dart';
+import 'package:app_tracking/core/routes/app_routes.dart';
+import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/controllers/vehicles/vehicles_detail_controller.dart';
 import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
-import 'package:app_tracking/ui/pages/map/map_page.dart';
 import 'package:app_tracking/ui/pages/vehicle/widgets/data_filter.dart';
 import 'package:app_tracking/ui/pages/vehicle/widgets/km_day_item.dart';
 import 'package:flutter/material.dart';
@@ -16,19 +18,14 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(device.name),
-      ),
+      appBar: AppBar(title: Text(device.name)),
 
       /// ✅ FAB CORRETO
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.picture_as_pdf),
         label: const Text("Relatório"),
         onPressed: () {
-          KmReportPdfService.generate(
-            deviceName: device.name,
-            data: controller.dailyKmList,
-          );
+          KmReportPdfService.generate(deviceName: device.name, data: controller.dailyKmList);
         },
       ),
 
@@ -40,45 +37,43 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            /// 🗺️ MAPA (DESTAQUE)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: MapWidget(
-                deviceId: controller.device.id,
-                height: 260,
-              ),
-            ),
+            /// 🚗 HEADER
+            _VehicleHeader(device: controller.device),
+
+            if (controller.liveDevice.tripReachedTarget) ...[const SizedBox(height: 16), const _TripTargetReachedBanner()],
 
             const SizedBox(height: 16),
 
-            /// 🚗 HEADER
-            _VehicleHeader(device: controller.device),
+            /// 👤 VÍNCULO
+            _LinkedClientCard(controller: controller),
 
             const SizedBox(height: 16),
 
             /// 📊 KPIs (SEM QUEBRAR)
             _KpiSection(controller: controller),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+
+            Text('Últimas quilometragens', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(
+              'Consultado direto no servidor — não existe um histórico salvo localmente. Use o filtro para outros períodos.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
 
             /// 🎯 FILTRO
             DateFilterCard(controller: controller),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             /// 📈 LISTA
             if (controller.dailyKmList.isEmpty)
               Column(
-                children: const [
-                  Icon(Icons.insights, size: 40, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text("Nenhum dado no período"),
-                ],
+                children: const [Icon(Icons.insights, size: 40, color: Colors.grey), SizedBox(height: 8), Text("Nenhum dado no período")],
               )
             else
-              ...controller.dailyKmList.map(
-                (item) => KmDayItem(item: item),
-              ),
+              ...controller.dailyKmList.map((item) => Padding(padding: const EdgeInsets.only(bottom: 8), child: KmDayItem(item: item))),
 
             const SizedBox(height: 100),
           ],
@@ -99,10 +94,7 @@ class _VehicleHeader extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Theme.of(context).cardColor,
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Theme.of(context).cardColor),
       child: Row(
         children: [
           CircleAvatar(
@@ -116,19 +108,10 @@ class _VehicleHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  device.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 Text(
                   isOn ? "Ligado agora" : "Desligado",
-                  style: TextStyle(
-                    color: isOn ? Colors.green : Colors.grey,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: isOn ? Colors.green : Colors.grey, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -136,6 +119,92 @@ class _VehicleHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TripTargetReachedBanner extends StatelessWidget {
+  const _TripTargetReachedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.notifications_active, color: Colors.orange),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Este veículo já atingiu a meta de quilometragem da Trip A. Zere a trip para limpar este aviso.',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LinkedClientCard extends StatelessWidget {
+  final VehicleDetailsController controller;
+
+  const _LinkedClientCard({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = Get.find<UserSessionService>().isAdmin.value;
+
+    return Obx(() {
+      final client = controller.linkedClient.value;
+      final isLoading = controller.isLoadingClient.value;
+      final canNavigate = isAdmin && client != null;
+      final color = Theme.of(context).colorScheme.primary;
+
+      return Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(blurRadius: 8, color: Colors.black.withOpacity(0.04))],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: canNavigate ? () => Get.toNamed(Routes.CLIENTS_DETAILS, arguments: client) : null,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(Icons.person_outline, size: 22, color: color),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Vinculado a', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 2),
+                      Text(
+                        isLoading ? 'Carregando...' : (client?.name ?? 'Nenhum cliente vinculado'),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: canNavigate ? color : null,
+                          decoration: canNavigate ? TextDecoration.underline : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (canNavigate) const Icon(Icons.chevron_right, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -148,32 +217,12 @@ class _KpiSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Theme.of(context).cardColor,
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Theme.of(context).cardColor),
       child: Row(
         children: [
-          Expanded(
-            child: _KpiItem(
-              label: "Trip A",
-              value: controller.tripFormatted,
-              icon: Icons.route,
-              onTap: () => _showReset(context),
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.grey.withOpacity(0.3),
-          ),
-          Expanded(
-            child: _KpiItem(
-              label: "Total",
-              value: "${controller.totalKm.value} km",
-              icon: Icons.speed,
-            ),
-          ),
+          Expanded(child: _KpiItem(label: "Trip A", value: controller.tripFormatted, icon: Icons.route, onTap: () => _showReset(context))),
+          Container(width: 1, height: 40, color: Colors.grey.withOpacity(0.3)),
+          Expanded(child: _KpiItem(label: "Total", value: "${controller.totalKm.value} km", icon: Icons.speed)),
         ],
       ),
     );
@@ -187,17 +236,14 @@ class _KpiSection extends StatelessWidget {
       primaryMethod: () {
         controller.resetTip(
           'trip A',
-          controller.target.text.isEmpty ? 0.0 : double.tryParse(controller.target.text) ?? 0.0,
+          controller.target.text.isEmpty ? 0.0 : double.tryParse(controller.target.text.replaceAll(',', '.')) ?? 0.0,
         );
       },
       body: TextFormField(
         controller: controller.target,
         keyboardType: TextInputType.number,
         textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(
-          labelText: 'Meta (km)',
-          border: OutlineInputBorder(),
-        ),
+        decoration: const InputDecoration(labelText: 'Meta (km)', border: OutlineInputBorder()),
       ),
       secondyMethod: () {},
     );
@@ -210,12 +256,7 @@ class _KpiItem extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
 
-  const _KpiItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.onTap,
-  });
+  const _KpiItem({required this.label, required this.value, required this.icon, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -226,15 +267,9 @@ class _KpiItem extends StatelessWidget {
         children: [
           Icon(icon, size: 20),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );

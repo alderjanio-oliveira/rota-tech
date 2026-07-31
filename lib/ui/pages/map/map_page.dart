@@ -1,14 +1,42 @@
 import 'dart:async';
 
+import 'package:app_tracking/core/routes/app_routes.dart';
+import 'package:app_tracking/ui/atoms/status_badge.dart';
 import 'package:app_tracking/ui/controllers/map_controller.dart';
+import 'package:app_tracking/ui/model/positiion_model.dart';
+import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
+import 'package:app_tracking/ui/pages/home/widgets/egine_action_modal.dart';
 import 'package:app_tracking/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+/// Realça o brilho do tile escuro (CartoDB Dark Matter é bem escuro por
+/// padrão) pra ruas e nomes ficarem mais legíveis, sem trocar de provider.
+Widget _lightenTileBuilder(BuildContext context, Widget tileWidget, TileImage tile) {
+  return ColorFiltered(
+    colorFilter: const ColorFilter.matrix([
+      1.6, 0, 0, 0, 55, //R
+      0, 1.6, 0, 0, 55, //G
+      0, 0, 1.6, 0, 55, //B
+      0, 0, 0, 1, 0, //A
+    ]),
+    child: tileWidget,
+  );
+}
 
 class MapWidget extends StatefulWidget {
   final int? deviceId;
+
+  /// Restringe o mapa a esses devices (ex.: todas as motos de um cliente).
+  /// Tem prioridade sobre [deviceId].
+  final List<int>? deviceIds;
+
+  /// Rótulo do balão de filtro (ex.: nome do cliente) — só aparece junto
+  /// com [deviceIds]. Some com o "x" pra voltar à visualização padrão.
+  final String? filterLabel;
 
   /// Altura fixa (ex.: quando embutido num card/lista). Se nulo, o mapa
   /// preenche o espaço disponível do pai (ex.: dentro de um IndexedStack).
@@ -18,7 +46,7 @@ class MapWidget extends StatefulWidget {
   /// o mapa centraliza e seleciona ele.
   final RxString? searchQuery;
 
-  const MapWidget({super.key, this.deviceId, this.height, this.searchQuery});
+  const MapWidget({super.key, this.deviceId, this.deviceIds, this.filterLabel, this.height, this.searchQuery});
 
   @override
   State<MapWidget> createState() => _MapWidgetState();
@@ -38,7 +66,7 @@ class _MapWidgetState extends State<MapWidget> {
   void initState() {
     super.initState();
 
-    controller.init(deviceId: widget.deviceId);
+    controller.init(deviceId: widget.deviceId, deviceIds: widget.deviceIds, filterLabel: widget.filterLabel);
 
     controller.onPositionUpdated = (position) {
       if (_followVehicle && controller.devices.length == 1) {
@@ -86,14 +114,20 @@ class _MapWidgetState extends State<MapWidget> {
             },
           ),
           children: [
-            /// TILE
+            /// TILE — CartoDB Voyager/Dark Matter: visual limpo, estilo
+            /// Google Maps, sem chave de API. Estilo escuro de verdade no
+            /// dark mode (em vez de escurecer o mapa claro com overlay), com
+            /// um leve realce de brilho pra ruas ficarem mais legíveis.
             TileLayer(
-              urlTemplate: 'https://api.maptiler.com/maps/bright-v2/{z}/{x}/{y}.png?key=xvu6cMMOUoNcxzaLO3IE',
+              urlTemplate:
+                  isDark
+                      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+              subdomains: const ['a', 'b', 'c', 'd'],
+              retinaMode: true,
               userAgentPackageName: 'com.example.app_tracking',
+              tileBuilder: isDark ? _lightenTileBuilder : null,
             ),
-
-            /// DARK OVERLAY
-            if (isDark) Container(color: Colors.black.withOpacity(0.35)),
 
             /// TRILHAS
             Obx(() {
@@ -160,28 +194,39 @@ class _MapWidgetState extends State<MapWidget> {
                     }).toList(),
               );
             }),
+
+            /// ATRIBUIÇÃO (obrigatória pelo CARTO/OSM)
+            RichAttributionWidget(
+              alignment: AttributionAlignment.bottomLeft,
+              attributions: [
+                TextSourceAttribution('CARTO', onTap: () => launchUrlString('https://carto.com/attributions')),
+                TextSourceAttribution(
+                  'OpenStreetMap contributors',
+                  onTap: () => launchUrlString('https://www.openstreetmap.org/copyright'),
+                ),
+              ],
+            ),
           ],
         ),
 
-        /// CONTROLES
+        /// TROCAR VEÍCULO (um por um)
+        Positioned(top: 16, right: 16, child: _MapButton(icon: Icons.swap_horiz, onTap: _selectNextDevice)),
+
+        /// BALÃO DE FILTRO (ex.: "motos do cliente X") — some ao tocar no x.
         Positioned(
-          right: 16,
-          bottom: 120,
-          child: Column(
-            children: [
-              _MapButton(icon: Icons.my_location, onTap: _centerMap),
-              const SizedBox(height: 10),
-              _MapButton(
-                icon: _followVehicle ? Icons.gps_fixed : Icons.gps_not_fixed,
-                onTap: () {
-                  setState(() => _followVehicle = !_followVehicle);
-                },
-              ),
-            ],
-          ),
+          top: 16,
+          left: 16,
+          right: 76,
+          child: Obx(() {
+            final label = controller.filterLabel.value;
+            if (label == null) return const SizedBox.shrink();
+
+            return _FilterBadge(label: label, onClear: _clearFilter);
+          }),
         ),
 
-        /// CARD ANIMADO
+        /// CONTROLES + CARD num único bloco — nunca um por trás do outro,
+        /// porque crescem juntos na mesma Column em vez de Positioned soltos.
         Positioned(
           left: 16,
           right: 16,
@@ -189,14 +234,47 @@ class _MapWidgetState extends State<MapWidget> {
           child: Obx(() {
             final device = controller.devices.firstWhereOrNull((d) => d.id == _selectedDeviceId);
 
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, animation) {
-                final slide = Tween(begin: const Offset(0, 1), end: Offset.zero).animate(animation);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (device != null) ...[
+                      _MapButton(icon: Icons.visibility, onTap: () => _openDetails(device)),
+                      const SizedBox(width: 10),
+                      _MapButton(icon: device.blocked == true ? Icons.lock : Icons.lock_open, onTap: () => _toggleLock(device)),
+                      const SizedBox(width: 10),
+                    ],
+                    _MapButton(icon: Icons.my_location, onTap: _centerMap),
+                    const SizedBox(width: 10),
+                    _MapButton(
+                      icon: _followVehicle ? Icons.gps_fixed : Icons.gps_not_fixed,
+                      onTap: () {
+                        setState(() => _followVehicle = !_followVehicle);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) {
+                    final slide = Tween(begin: const Offset(0, 1), end: Offset.zero).animate(animation);
 
-                return SlideTransition(position: slide, child: FadeTransition(opacity: animation, child: child));
-              },
-              child: device == null ? const SizedBox() : _VehicleInfoCard(key: ValueKey(device.id), device: device),
+                    return SlideTransition(position: slide, child: FadeTransition(opacity: animation, child: child));
+                  },
+                  child:
+                      device == null
+                          ? const SizedBox()
+                          : GestureDetector(
+                            key: ValueKey(device.id),
+                            onTap: () => _openDetails(device),
+                            child: _VehicleInfoCard(device: device),
+                          ),
+                ),
+              ],
             );
           }),
         ),
@@ -209,12 +287,61 @@ class _MapWidgetState extends State<MapWidget> {
     return stack;
   }
 
+  void _clearFilter() {
+    controller.clearFilter();
+    setState(() => _initialCameraSet = false);
+  }
+
   void _centerMap() {
     if (controller.devices.isEmpty) return;
 
     final d = controller.devices.first;
 
     mapController.move(LatLng(d.latitude, d.longitude), 17);
+  }
+
+  /// Vai selecionando os veículos um por um (ordem da lista, com wrap-around).
+  void _selectNextDevice() {
+    final list = controller.devices;
+    if (list.isEmpty) return;
+
+    final currentIndex = list.indexWhere((d) => d.id == _selectedDeviceId);
+    final next = list[(currentIndex + 1) % list.length];
+
+    setState(() => _selectedDeviceId = next.id);
+    mapController.move(LatLng(next.latitude, next.longitude), 17);
+  }
+
+  void _openDetails(DevicePosition device) {
+    final vehicle = controller.vehicle.list.firstWhereOrNull((d) => d.id == device.id);
+    if (vehicle == null) return;
+
+    Get.toNamed(Routes.VEHICLE_DETAILS, arguments: vehicle);
+  }
+
+  void _toggleLock(DevicePosition device) {
+    final blocked = device.blocked;
+
+    if (blocked == null) {
+      EngineActionModal.show(
+        context: context,
+        onEngineOn: () => controller.toggleLock(device.id, block: false),
+        onEngineOff: () => controller.toggleLock(device.id, block: true),
+      );
+      return;
+    }
+
+    GenericModalMolecule.show(
+      context: context,
+      isDanger: !blocked,
+      icon: blocked ? Icons.lock_open : Icons.lock,
+      title: blocked ? 'Desbloquear veículo' : 'Bloquear veículo',
+      description: blocked ? 'Deseja liberar o veículo?' : 'Deseja BLOQUEAR o veículo? Isso pode desligá-lo remotamente.',
+      successTextButton: blocked ? 'Desbloquear' : 'Bloquear',
+      secondyTextButton: 'Cancelar',
+      primaryMethod: () => controller.toggleLock(device.id, block: !blocked),
+      secondyMethod: () {},
+    );
   }
 
   void _setInitialZoom(List validDevices) {
@@ -230,6 +357,43 @@ class _MapWidgetState extends State<MapWidget> {
 
       mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)));
     }
+  }
+}
+
+/// BALÃO DE FILTRO
+class _FilterBadge extends StatelessWidget {
+  final String label;
+  final VoidCallback onClear;
+
+  const _FilterBadge({required this.label, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(100),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6, right: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.person, size: 16, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            ),
+            IconButton(
+              tooltip: 'Voltar à visualização padrão',
+              onPressed: onClear,
+              icon: const Icon(Icons.close, size: 16),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -286,6 +450,16 @@ class _VehicleInfoCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold))),
+                StatusBadge(
+                  icon: Icons.battery_charging_full,
+                  color: device.charge == null ? null : (device.charge == true ? Colors.green : Colors.red),
+                ),
+                const SizedBox(width: 8),
+                StatusBadge(
+                  icon: device.blocked == true ? Icons.lock : Icons.lock_open,
+                  color: device.blocked == null ? null : (device.blocked == true ? Colors.red : Colors.green),
+                ),
+                const SizedBox(width: 8),
                 Text(isOn ? 'ON' : 'OFF', style: TextStyle(color: isOn ? Colors.green : Colors.grey, fontWeight: FontWeight.bold)),
               ],
             ),

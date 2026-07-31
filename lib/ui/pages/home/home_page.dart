@@ -178,6 +178,8 @@ class HomePage extends GetView<HomeController> {
                             deviceName: device.name,
                             status: device.status,
                             loading: device.loading.value,
+                            charge: device.attributes.charge,
+                            reachedTarget: device.tripReachedTarget,
                             onTap:
                                 () => GenericModalMolecule.show(
                                   context: context,
@@ -191,6 +193,7 @@ class HomePage extends GetView<HomeController> {
 
                                 final isLoading = device.loading.value;
                                 final isBlocked = lockState.value == true;
+                                final lockColor = lockState.value == null ? Colors.grey : (isBlocked ? Colors.red : Colors.green);
 
                                 if (isLoading) {
                                   return const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
@@ -219,7 +222,7 @@ class HomePage extends GetView<HomeController> {
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(color: isBlocked ? Colors.red : Colors.green, shape: BoxShape.circle),
+                                    decoration: BoxDecoration(color: lockColor, shape: BoxShape.circle),
                                     child: Icon(isBlocked ? Icons.lock : Icons.lock_open, color: Colors.white, size: 16),
                                   ),
                                 );

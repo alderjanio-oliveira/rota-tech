@@ -34,9 +34,12 @@ class BillingConfigPage extends GetView<BillingConfigController> {
           const SizedBox(height: 12),
           TextField(
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Valor'),
-            onChanged: (v) => controller.price.value = double.tryParse(v) ?? 0.0,
-            controller: TextEditingController(text: controller.price.value.toString()),
+            decoration: const InputDecoration(
+              labelText: 'Valor por veículo',
+              helperText: 'O total do cliente = esse valor × quantidade de veículos dele',
+            ),
+            onChanged: (v) => controller.pricePerDevice.value = double.tryParse(v.replaceAll(',', '.')) ?? 0.0,
+            controller: TextEditingController(text: controller.pricePerDevice.value.toString()),
           ),
           const SizedBox(height: 12),
           TextField(

@@ -64,6 +64,8 @@ class ClientModel {
     return DateTime(date.year, date.month, date.day);
   }
 
+  int get deviceCount => devices?.length ?? 0;
+
   int get daysToExpire {
     if (expiresAt == null) return 9999;
 

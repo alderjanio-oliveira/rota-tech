@@ -5,14 +5,17 @@ import 'package:app_tracking/ui/model/billing_config_model.dart';
 class ReminderMessageService {
   final BillingConfigService billingConfigService = BillingConfigService();
 
-  String buildMessage(ClientModel client, ReminderType type) {
+  String buildMessage(ClientModel client, ReminderType type, {required int deviceCount}) {
     final config = _loadValidBillingConfig();
     final pixType = pixKeyTypeLabel(config.pixKeyType);
     final dueDate = _formatDate(client.expiresAt);
-    final promotionalPrice = _formatMoney(config.price);
+    final devices = deviceCount < 1 ? 1 : deviceCount;
+    final total = config.pricePerDevice * devices;
+    final devicesLine = '$devices veículo${devices > 1 ? 's' : ''} × R\$ ${_formatMoney(config.pricePerDevice)}';
+    final promotionalPrice = _formatMoney(total);
     final overdueDays = client.daysToExpire < 0 ? client.daysToExpire.abs() : 0;
     final dailyInterest = _formatPercent(config.dailyInterestPercent);
-    final overdueTotal = config.price + (config.price * (config.dailyInterestPercent / 100) * overdueDays);
+    final overdueTotal = total + (total * (config.dailyInterestPercent / 100) * overdueDays);
 
     switch (type) {
       case ReminderType.before:
@@ -23,7 +26,7 @@ class ReminderMessageService {
 
       📅 Vencimento: $dueDate
       não deixe para última hora! 😉
-      lembrando que o valor promocional é de R\$ $promotionalPrice
+      lembrando que o valor promocional é de R\$ $promotionalPrice ($devicesLine)
       APENAS ATÉ A DATA DE VENCIMENTO!
 
       💳 PIX ($pixType):
@@ -40,7 +43,7 @@ class ReminderMessageService {
 
       💳 PIX ($pixType):
       ${config.pixKey}
-      Valor promocional de R\$ $promotionalPrice válido somente até o final do dia de hoje!
+      Valor promocional de R\$ $promotionalPrice ($devicesLine) válido somente até o final do dia de hoje!
       Ficamos no aguardo.
       Agradecemos a compreensão.
         ''';
@@ -53,6 +56,7 @@ class ReminderMessageService {
 
       📅 Vencimento: $dueDate
       Dias em atraso: $overdueDays
+      Valor base: R\$ $promotionalPrice ($devicesLine)
       Após o vencimento, há acréscimo de $dailyInterest ao dia.
       Valor atualizado hoje: R\$ ${_formatMoney(overdueTotal)}
 
@@ -80,16 +84,20 @@ class ReminderMessageService {
     ''';
   }
 
-  String buildClientInfoMessage(ClientModel client) {
+  String buildClientInfoMessage(ClientModel client, {required int deviceCount}) {
     final config = _loadValidBillingConfig();
     final message = config.clientInfoMessage.trim().isNotEmpty ? config.clientInfoMessage.trim() : BillingConfig.defaultClientInfoMessage;
+    final devices = deviceCount < 1 ? 1 : deviceCount;
+    final total = config.pricePerDevice * devices;
 
     return '''
 $message
 
 Condições financeiras:
 
-- Valor acordado: R\$ ${_formatMoney(config.price)}.
+- Quantidade de veículos: $devices.
+- Valor por veículo: R\$ ${_formatMoney(config.pricePerDevice)}.
+- Valor acordado: R\$ ${_formatMoney(total)}.
 - Valor válido até a data de vencimento: ${_formatDate(client.expiresAt)}.
 - Após o vencimento, há acréscimo de ${_formatPercent(config.dailyInterestPercent)} ao dia.
     ''';
@@ -122,8 +130,8 @@ Agradecemos pela confiança e seguimos à disposição.
       throw BillingConfigException('Informe a chave PIX nas configurações de cobrança.');
     }
 
-    if (config.price <= 0) {
-      throw BillingConfigException('Informe um valor de mensalidade maior que zero nas configurações de cobrança.');
+    if (config.pricePerDevice <= 0) {
+      throw BillingConfigException('Informe um valor por veículo maior que zero nas configurações de cobrança.');
     }
 
     if (config.dailyInterestPercent < 0) {
@@ -148,9 +156,8 @@ Agradecemos pela confiança e seguimos à disposição.
   }
 
   String _formatPercent(double value) {
-    final formatted = value % 1 == 0
-        ? value.toStringAsFixed(0)
-        : value.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    final formatted =
+        value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
 
     return '${formatted.replaceAll('.', ',')}%';
   }

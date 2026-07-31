@@ -90,11 +90,11 @@ class ClientsAdminController extends GetxController {
 
     try {
       if (days > 0) {
-        message = messageServiceWhatsApp.buildMessage(client, ReminderType.before);
+        message = messageServiceWhatsApp.buildMessage(client, ReminderType.before, deviceCount: client.deviceCount);
       } else if (days == 0) {
-        message = messageServiceWhatsApp.buildMessage(client, ReminderType.dueToday);
+        message = messageServiceWhatsApp.buildMessage(client, ReminderType.dueToday, deviceCount: client.deviceCount);
       } else {
-        message = messageServiceWhatsApp.buildMessage(client, ReminderType.overdue);
+        message = messageServiceWhatsApp.buildMessage(client, ReminderType.overdue, deviceCount: client.deviceCount);
       }
     } on BillingConfigException catch (e) {
       _showBillingConfigError(e.message);

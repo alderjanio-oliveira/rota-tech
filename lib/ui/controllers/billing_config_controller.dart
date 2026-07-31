@@ -11,7 +11,7 @@ class BillingConfigController extends GetxController {
   final companyName = ''.obs;
   final pixKey = ''.obs;
   final pixKeyType = PixKeyType.cpf.obs;
-  final price = 0.0.obs;
+  final pricePerDevice = 0.0.obs;
   final dailyInterestPercent = 1.5.obs;
   final clientInfoMessageController = TextEditingController();
 
@@ -23,7 +23,7 @@ class BillingConfigController extends GetxController {
       companyName.value = config.companyName;
       pixKey.value = config.pixKey;
       pixKeyType.value = config.pixKeyType;
-      price.value = config.price;
+      pricePerDevice.value = config.pricePerDevice;
       dailyInterestPercent.value = config.dailyInterestPercent;
       clientInfoMessageController.text = config.clientInfoMessage;
     } else {
@@ -43,7 +43,7 @@ class BillingConfigController extends GetxController {
         companyName: companyName.value,
         pixKey: pixKey.value,
         pixKeyType: pixKeyType.value,
-        price: price.value,
+        pricePerDevice: pricePerDevice.value,
         dailyInterestPercent: dailyInterestPercent.value,
         clientInfoMessage: clientInfoMessageController.text,
       ),

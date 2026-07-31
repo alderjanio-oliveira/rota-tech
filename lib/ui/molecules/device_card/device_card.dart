@@ -1,3 +1,4 @@
+import 'package:app_tracking/ui/atoms/status_badge.dart';
 import 'package:flutter/material.dart';
 
 class DeviceCard extends StatelessWidget {
@@ -10,6 +11,13 @@ class DeviceCard extends StatelessWidget {
   final VoidCallback onTap;
   final List<Widget>? actions;
 
+  /// true = carregando (verde), false = desconectado (vermelho), null = sem info (cinza).
+  final bool? charge;
+
+  /// Mostra um sino enquanto o veículo estiver com a meta de km batida —
+  /// some sozinho quando a trip for zerada/refeita.
+  final bool reachedTarget;
+
   const DeviceCard({
     super.key,
     required this.deviceName,
@@ -20,6 +28,8 @@ class DeviceCard extends StatelessWidget {
     required this.loading,
     required this.onTap,
     this.actions,
+    this.charge,
+    this.reachedTarget = false,
   });
 
   @override
@@ -34,12 +44,7 @@ class DeviceCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: Theme.of(context).cardColor,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 10,
-              color: Colors.black.withOpacity(0.05),
-            ),
-          ],
+          boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black.withOpacity(0.05))],
         ),
         child: Row(
           children: [
@@ -57,48 +62,41 @@ class DeviceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    deviceName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          deviceName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ),
+                      if (reachedTarget) ...[
+                        const StatusBadge(icon: Icons.notifications_active, color: Colors.orange),
+                        const SizedBox(width: 6),
+                      ],
+                      StatusBadge(icon: Icons.battery_charging_full, color: charge == null ? null : (charge! ? Colors.green : Colors.red)),
+                    ],
                   ),
 
                   const SizedBox(height: 4),
 
-                  Text(
-                    isOn ? "Ligado" : "Desligado",
-                    style: TextStyle(
-                      color: isOn ? Colors.green : Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
+                  Text(isOn ? "Ligado" : "Desligado", style: TextStyle(color: isOn ? Colors.green : Colors.grey, fontSize: 12)),
 
                   if (address != null) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      address!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    Text(address!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
 
                   const SizedBox(height: 6),
 
-                  Text(
-                    "${(totalDistance / 1000).toStringAsFixed(1)} km",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text("${(totalDistance / 1000).toStringAsFixed(1)} km", style: const TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
 
             /// ⚡ ACTIONS
-            Column(
-              children: actions ?? [],
-            ),
+            Column(children: actions ?? []),
           ],
         ),
       ),

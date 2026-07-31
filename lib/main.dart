@@ -10,6 +10,7 @@ import 'package:app_tracking/ui/controllers/warnings/warning_controller.dart';
 import 'package:app_tracking/ui/pages/home/home_page.dart';
 import 'package:app_tracking/ui/pages/infos/trip_details_page.dart';
 import 'package:app_tracking/ui/pages/login/login_page.dart';
+import 'package:app_tracking/ui/pages/splash/splash_page.dart';
 import 'package:app_tracking/ui/theme/app_theme.dart';
 import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/material.dart';
@@ -32,19 +33,12 @@ void main() async {
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
 
-  Workmanager().registerOneOffTask(
-    "trip_manual",
-    Constants.taskTripAlert,
-  );
+  Workmanager().registerOneOffTask("trip_manual", Constants.taskTripAlert);
 
   final launchDetails = await notificationService.getLaunchDetails();
   await notificationService.requestPermission();
 
-  runApp(
-    MyApp(
-      notificationPayload: launchDetails?.notificationResponse?.payload,
-    ),
-  );
+  runApp(MyApp(notificationPayload: launchDetails?.notificationResponse?.payload));
 }
 
 class MyApp extends StatelessWidget {
@@ -70,7 +64,7 @@ class MyApp extends StatelessWidget {
         future: _checkAuth(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const SplashPage();
           }
           return choiseFirstPage(snapshot.data == true);
         },
@@ -84,9 +78,7 @@ class MyApp extends StatelessWidget {
       if (Get.isRegistered<WarningController>()) return TripDetailsPage();
       return HomePage();
     } else {
-      return LoginPage(
-        notificationPayload: notificationPayload,
-      );
+      return LoginPage(notificationPayload: notificationPayload);
     }
   }
 
@@ -112,6 +104,6 @@ class NotificationsLaunchPage extends StatelessWidget {
       Get.offAllNamed(Routes.NOTIFICATIONS);
     });
 
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return const SplashPage();
   }
 }

@@ -12,10 +12,7 @@ class ClientsDetailsController extends GetxController {
   final ClientAdminService clientAdminService;
   final messageServiceWhatsApp = ReminderMessageService();
 
-  ClientsDetailsController({
-    required this.vehicle,
-    required this.clientAdminService,
-  });
+  ClientsDetailsController({required this.vehicle, required this.clientAdminService});
 
   late ClientModel client;
 
@@ -160,7 +157,7 @@ class ClientsDetailsController extends GetxController {
   }
 
   Future<void> sendClientInfoMessage() async {
-    final message = messageServiceWhatsApp.buildClientInfoMessage(client);
+    final message = messageServiceWhatsApp.buildClientInfoMessage(client, deviceCount: linkedDevicesList.length);
     await _sendWhatsAppMessage(message);
   }
 
@@ -168,7 +165,11 @@ class ClientsDetailsController extends GetxController {
     try {
       final days = daysToExpire;
       final type = days > 0 ? ReminderType.before : (days == 0 ? ReminderType.dueToday : ReminderType.overdue);
-      final message = messageServiceWhatsApp.buildMessage(client.copyWith(expiresAt: expiresAt.value), type);
+      final message = messageServiceWhatsApp.buildMessage(
+        client.copyWith(expiresAt: expiresAt.value),
+        type,
+        deviceCount: linkedDevicesList.length,
+      );
       await _sendWhatsAppMessage(message);
     } on BillingConfigException catch (e) {
       Get.snackbar('Configuração incompleta', e.message);

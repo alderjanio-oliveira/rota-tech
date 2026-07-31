@@ -19,7 +19,10 @@ class TraccarWebSocketService {
   void connect({required void Function(Map<String, dynamic>) onData, void Function(dynamic error)? onError}) {
     if (!_listeners.contains(onData)) _listeners.add(onData);
     if (isConnected) return;
+    _open(onError);
+  }
 
+  void _open(void Function(dynamic error)? onError) {
     final uri = _resolveUri(dotenv.env['SOCKET_URL']!);
 
     _channel = IOWebSocketChannel.connect(uri, headers: {HttpHeaders.cookieHeader: 'JSESSIONID=${session.sessionId.value}'});
@@ -31,11 +34,27 @@ class TraccarWebSocketService {
           listener(data);
         }
       },
-      onError: onError,
+      onError: (e) {
+        onError?.call(e);
+        _handleDrop(onError);
+      },
       onDone: () {
         print('🔌 Traccar WebSocket fechado');
+        _handleDrop(onError);
       },
     );
+  }
+
+  /// Cai a conexão (queda de rede, app em background, servidor reiniciou,
+  /// etc.) — reconecta sozinho enquanto ainda houver listeners (app aberto).
+  /// Só não reconecta quando `disconnect()` já limpou os listeners de propósito.
+  void _handleDrop(void Function(dynamic error)? onError) {
+    _channel = null;
+    if (_listeners.isEmpty) return;
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_channel == null && _listeners.isNotEmpty) _open(onError);
+    });
   }
 
   /// Uri.port resolve pra 0 quando o scheme é ws/wss sem porta explícita

@@ -2,7 +2,10 @@ class BillingConfig {
   final String companyName;
   final String pixKey;
   final PixKeyType pixKeyType;
-  final double price;
+
+  /// Valor cobrado por veículo/device vinculado ao cliente. O total do
+  /// cliente é `pricePerDevice * quantidade de devices dele`.
+  final double pricePerDevice;
   final double dailyInterestPercent;
   final String clientInfoMessage;
 
@@ -10,7 +13,7 @@ class BillingConfig {
     required this.companyName,
     required this.pixKey,
     required this.pixKeyType,
-    required this.price,
+    required this.pricePerDevice,
     this.dailyInterestPercent = 1.5,
     String? clientInfoMessage,
   }) : clientInfoMessage = clientInfoMessage ?? defaultClientInfoMessage;
@@ -39,20 +42,21 @@ Seguimos à disposição.
 ''';
 
   Map<String, dynamic> toJson() => {
-        'companyName': companyName,
-        'pixKey': pixKey,
-        'pixKeyType': pixKeyType.name,
-        'price': price,
-        'dailyInterestPercent': dailyInterestPercent,
-        'clientInfoMessage': clientInfoMessage,
-      };
+    'companyName': companyName,
+    'pixKey': pixKey,
+    'pixKeyType': pixKeyType.name,
+    'pricePerDevice': pricePerDevice,
+    'dailyInterestPercent': dailyInterestPercent,
+    'clientInfoMessage': clientInfoMessage,
+  };
 
   factory BillingConfig.fromJson(Map<String, dynamic> json) {
     return BillingConfig(
       companyName: json['companyName'] ?? '',
       pixKey: json['pixKey'] ?? '',
       pixKeyType: PixKeyType.values.firstWhere((e) => e.name == json['pixKeyType'], orElse: () => PixKeyType.cpf),
-      price: json['price']?.toDouble() ?? 0.0,
+      // Compat com configs salvas antes da mudança pra "por device".
+      pricePerDevice: json['pricePerDevice']?.toDouble() ?? json['price']?.toDouble() ?? 0.0,
       dailyInterestPercent: json['dailyInterestPercent']?.toDouble() ?? 1.5,
       clientInfoMessage: json['clientInfoMessage'] ?? defaultClientInfoMessage,
     );

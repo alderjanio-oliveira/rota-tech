@@ -44,3 +44,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# FVM Version Cache — versiona fvm_config.json (mesma convenção do
+# go-nansen/flutter), só ignora os symlinks/metadados locais do SDK em cache
+.fvm/flutter_sdk
+.fvm/versions
+.fvm/version
+.fvm/release

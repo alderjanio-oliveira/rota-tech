@@ -4,7 +4,6 @@ import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/core/utils/api.dart';
-import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/ui/models/daily_distance.dart';
 import 'package:app_tracking/ui/models/daily_km_model.dart';
 import 'package:get/get.dart';
@@ -20,9 +19,7 @@ class TraccarService extends GetxService {
   final String urlWs = dotenv.env['SOCKET_URL']!;
 
   TraccarService();
-  ApiHelper apiHelper = ApiHelper(
-    session: Get.find<UserSessionService>(),
-  );
+  ApiHelper apiHelper = ApiHelper(session: Get.find<UserSessionService>());
 
   Future<List<dynamic>> getDevices() async {
     final url = Uri.parse('$baseUrl/devices?userId=${session.userId.value}');
@@ -207,11 +204,12 @@ class TraccarService extends GetxService {
     }
 
     return dailyOdometers.entries.map((e) {
-      final values = e.value;
-      final km = values.isNotEmpty ? values.last - values.first : 0.0;
+        final values = e.value;
+        final km = values.isNotEmpty ? values.last - values.first : 0.0;
 
-      return DailyDistance(day: DateTime.parse(e.key), km: km);
-    }).toList()..sort((a, b) => a.day.compareTo(b.day));
+        return DailyDistance(day: DateTime.parse(e.key), km: km);
+      }).toList()
+      ..sort((a, b) => a.day.compareTo(b.day));
   }
 
   Future<List<Map<String, dynamic>>> getClients() async {
@@ -288,51 +286,87 @@ class TraccarService extends GetxService {
     userData['expirationTime'] = DateTime.utc(newExpireDate.year, newExpireDate.month, newExpireDate.day, 23, 59, 59).toIso8601String();
     userData['attributes'] = attributes;
 
-    final response = await http.put(
-      url,
-      headers: _buildHeaders(),
-      body: json.encode(userData),
-    );
+    final response = await http.put(url, headers: _buildHeaders(), body: json.encode(userData));
 
     return response.statusCode == 200;
   }
 
-  Future<bool> updateDeviceTrip({
-    required DeviceModel device,
-    required String tripKey, // "tripA" ou "tripB"
-    required double offset,
-    double? target,
-    bool active = true,
+  // ===============================
+  // DISTANCE REMINDERS ("Trip A")
+  //
+  // Esse fork do Traccar tem uma feature própria (tabela tc_distance_reminders
+  // + endpoint /api/distancereminders) — NÃO usa mais attributes.trip no
+  // device. O vínculo com o device é feito à parte via /api/permissions.
+  // ===============================
+
+  Future<List<Map<String, dynamic>>> getDistanceReminders(int deviceId) async {
+    final url = Uri.parse('$baseUrl/distancereminders?deviceId=$deviceId');
+    final response = await http.get(url, headers: _buildHeaders());
+    if (response.statusCode != 200) return [];
+
+    final List data = json.decode(response.body);
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  /// Cria um novo lembrete de quilometragem e já vincula ao device.
+  Future<Map<String, dynamic>?> createDistanceReminder({
+    required int deviceId,
+    required String name,
+    required double thresholdDistance,
+    required double startValue,
   }) async {
-    final getUrl = Uri.parse('$baseUrl/devices/${device.id}');
-
-    // 1️⃣ Buscar device atual
-    final getResponse = await http.get(getUrl, headers: _buildHeaders());
-
-    if (getResponse.statusCode != 200) return false;
-
-    final deviceData = json.decode(getResponse.body);
-
-    Map<String, dynamic> attributes = Map<String, dynamic>.from(deviceData['attributes'] ?? {});
-
-    // 2️⃣ Garantir estrutura trips
-    Map<String, dynamic> trips = Map<String, dynamic>.from(attributes['trip'] ?? {});
-
-    // 3️⃣ Atualizar trip específica
-    trips = {'offset': offset, 'target': target, 'active': active, 'name': tripKey};
-
-    attributes['trip'] = trips;
-
-    // 4️⃣ Enviar update
-    final putUrl = Uri.parse('$baseUrl/devices/${device.id}');
-
-    final response = await http.put(
-      putUrl,
+    final createResponse = await http.post(
+      Uri.parse('$baseUrl/distancereminders'),
       headers: _buildHeaders(),
-      body: json.encode({'id': deviceData['id'], 'name': deviceData['name'], 'uniqueId': deviceData['uniqueId'], 'attributes': attributes}),
+      body: json.encode({
+        'name': name,
+        'thresholdDistance': thresholdDistance,
+        'startValue': startValue,
+        'status': 'pending',
+        'traveledDistance': 0,
+        'attributes': {},
+      }),
     );
+    if (createResponse.statusCode != 200) {
+      throw Exception('Erro ao criar lembrete (${createResponse.statusCode}): ${_shortBody(createResponse.body)}');
+    }
 
+    final reminder = Map<String, dynamic>.from(json.decode(createResponse.body));
+
+    final linkResponse = await http.post(
+      Uri.parse('$baseUrl/permissions'),
+      headers: _buildHeaders(),
+      body: json.encode({'deviceId': deviceId, 'distanceReminderId': reminder['id']}),
+    );
+    // /api/permissions responde 204 (No Content) quando o vínculo é criado.
+    if (linkResponse.statusCode != 200 && linkResponse.statusCode != 204) {
+      throw Exception('Erro ao vincular lembrete ao veículo (${linkResponse.statusCode}): ${_shortBody(linkResponse.body)}');
+    }
+
+    return reminder;
+  }
+
+  /// Fecha o lembrete (marca "done", servidor calcula o km rodado final).
+  Future<bool> confirmDistanceReminder(int id) async {
+    final response = await http.post(Uri.parse('$baseUrl/distancereminders/$id/confirm'), headers: _buildHeaders());
     return response.statusCode == 200;
+  }
+
+  Future<bool> cancelDistanceReminder(int id) async {
+    final response = await http.post(Uri.parse('$baseUrl/distancereminders/$id/cancel'), headers: _buildHeaders());
+    return response.statusCode == 200;
+  }
+
+  /// Endpoint "escondido" (query param pouco óbvio) que devolve os usuários
+  /// vinculados a um device numa chamada só — exige que o usuário logado
+  /// seja manager/admin. Bem mais direto que cruzar /permissions com /users.
+  Future<List<Map<String, dynamic>>> getUsersByDevice(int deviceId) async {
+    final url = Uri.parse('$baseUrl/users?deviceId=$deviceId');
+    final response = await http.get(url, headers: _buildHeaders());
+    if (response.statusCode != 200) return [];
+
+    final List data = json.decode(response.body);
+    return data.cast<Map<String, dynamic>>();
   }
 
   String _formatDateOnly(DateTime date) {
@@ -346,5 +380,11 @@ class TraccarService extends GetxService {
     if (value is int) return value;
     if (value is String) return int.tryParse(value);
     return null;
+  }
+
+  /// Evita jogar página de erro HTML/JSON gigante direto numa snackbar.
+  String _shortBody(String body) {
+    final oneLine = body.replaceAll('\n', ' ').trim();
+    return oneLine.length > 200 ? '${oneLine.substring(0, 200)}...' : oneLine;
   }
 }

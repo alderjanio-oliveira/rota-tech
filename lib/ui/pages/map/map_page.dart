@@ -6,26 +6,13 @@ import 'package:app_tracking/ui/controllers/map_controller.dart';
 import 'package:app_tracking/ui/model/positiion_model.dart';
 import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
 import 'package:app_tracking/ui/pages/home/widgets/egine_action_modal.dart';
+import 'package:app_tracking/ui/theme/app_colors.dart';
 import 'package:app_tracking/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-
-/// Realça o brilho do tile escuro (CartoDB Dark Matter é bem escuro por
-/// padrão) pra ruas e nomes ficarem mais legíveis, sem trocar de provider.
-Widget _lightenTileBuilder(BuildContext context, Widget tileWidget, TileImage tile) {
-  return ColorFiltered(
-    colorFilter: const ColorFilter.matrix([
-      1.6, 0, 0, 0, 55, //R
-      0, 1.6, 0, 0, 55, //G
-      0, 0, 1.6, 0, 55, //B
-      0, 0, 0, 1, 0, //A
-    ]),
-    child: tileWidget,
-  );
-}
 
 class MapWidget extends StatefulWidget {
   final int? deviceId;
@@ -114,19 +101,15 @@ class _MapWidgetState extends State<MapWidget> {
             },
           ),
           children: [
-            /// TILE — CartoDB Voyager/Dark Matter: visual limpo, estilo
-            /// Google Maps, sem chave de API. Estilo escuro de verdade no
-            /// dark mode (em vez de escurecer o mapa claro com overlay), com
-            /// um leve realce de brilho pra ruas ficarem mais legíveis.
+            /// TILE — Esri World Street Map / Dark Gray Canvas: sem chave de
+            /// API, visual limpo tipo Google Maps. Atenção: o REST tile
+            /// service da Esri usa a ordem {z}/{y}/{x} (y antes de x).
             TileLayer(
               urlTemplate:
                   isDark
-                      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
-              retinaMode: true,
+                      ? 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+                      : 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
               userAgentPackageName: 'com.example.app_tracking',
-              tileBuilder: isDark ? _lightenTileBuilder : null,
             ),
 
             /// TRILHAS
@@ -137,7 +120,7 @@ class _MapWidgetState extends State<MapWidget> {
                 polylines:
                     controller.trails.entries
                         .where((e) => e.value.isNotEmpty)
-                        .map((e) => Polyline(points: e.value, strokeWidth: 4, color: Colors.blueAccent.withOpacity(0.8)))
+                        .map((e) => Polyline(points: e.value, strokeWidth: 4, color: AppColors.primary.withOpacity(0.8)))
                         .toList(),
               );
             }),
@@ -195,14 +178,13 @@ class _MapWidgetState extends State<MapWidget> {
               );
             }),
 
-            /// ATRIBUIÇÃO (obrigatória pelo CARTO/OSM)
+            /// ATRIBUIÇÃO (obrigatória pela Esri)
             RichAttributionWidget(
               alignment: AttributionAlignment.bottomLeft,
               attributions: [
-                TextSourceAttribution('CARTO', onTap: () => launchUrlString('https://carto.com/attributions')),
                 TextSourceAttribution(
-                  'OpenStreetMap contributors',
-                  onTap: () => launchUrlString('https://www.openstreetmap.org/copyright'),
+                  'Esri, HERE, Garmin, FAO, NOAA, USGS',
+                  onTap: () => launchUrlString('https://www.esri.com/en-us/legal/copyright-trademarks'),
                 ),
               ],
             ),
@@ -406,7 +388,7 @@ class _VehicleMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? Colors.green : Colors.grey;
+    final color = isActive ? AppColors.success : AppColors.gray;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -415,7 +397,7 @@ class _VehicleMarker extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white,
-        border: isSelected ? Border.all(color: Colors.blueAccent, width: 2) : null,
+        border: isSelected ? Border.all(color: AppColors.primary, width: 2) : null,
         boxShadow: [BoxShadow(blurRadius: isSelected ? 16 : 8, color: Colors.black.withOpacity(0.3))],
       ),
       child: Icon(Icons.navigation_rounded, color: color, size: 20),
@@ -445,22 +427,22 @@ class _VehicleInfoCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: isOn ? Colors.green : Colors.grey,
-                  child: const Icon(Icons.directions_car, color: Colors.white),
+                  backgroundColor: (isOn ? AppColors.success : AppColors.gray).withOpacity(0.15),
+                  child: Icon(Icons.directions_car_rounded, color: isOn ? AppColors.success : AppColors.gray),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold))),
                 StatusBadge(
                   icon: Icons.battery_charging_full,
-                  color: device.charge == null ? null : (device.charge == true ? Colors.green : Colors.red),
+                  color: device.charge == null ? null : (device.charge == true ? AppColors.success : AppColors.error),
                 ),
                 const SizedBox(width: 8),
                 StatusBadge(
                   icon: device.blocked == true ? Icons.lock : Icons.lock_open,
-                  color: device.blocked == null ? null : (device.blocked == true ? Colors.red : Colors.green),
+                  color: device.blocked == null ? null : (device.blocked == true ? AppColors.error : AppColors.success),
                 ),
                 const SizedBox(width: 8),
-                Text(isOn ? 'ON' : 'OFF', style: TextStyle(color: isOn ? Colors.green : Colors.grey, fontWeight: FontWeight.bold)),
+                Text(isOn ? 'ON' : 'OFF', style: TextStyle(color: isOn ? AppColors.success : AppColors.gray, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 12),
@@ -493,7 +475,8 @@ class _InfoItem extends StatelessWidget {
   }
 }
 
-/// BOTÃO
+/// BOTÃO — circular, no padrão de FAB de apps de mapa modernos (Google
+/// Maps/Uber), com o ícone na cor de destaque da marca.
 class _MapButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -506,9 +489,13 @@ class _MapButton extends StatelessWidget {
 
     return Material(
       color: theme.cardColor,
-      borderRadius: BorderRadius.circular(12),
+      shape: const CircleBorder(),
       elevation: 4,
-      child: InkWell(borderRadius: BorderRadius.circular(12), onTap: onTap, child: SizedBox(width: 44, height: 44, child: Icon(icon))),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(width: 44, height: 44, child: Icon(icon, color: AppColors.primary, size: 22)),
+      ),
     );
   }
 }

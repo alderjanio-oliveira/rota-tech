@@ -10,6 +10,7 @@ import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
 import 'package:app_tracking/ui/molecules/notification_bell.dart';
 import 'package:app_tracking/ui/pages/home/widgets/egine_action_modal.dart';
 import 'package:app_tracking/ui/pages/map/map_page.dart';
+import 'package:app_tracking/ui/theme/app_colors.dart';
 import 'package:app_tracking/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -27,14 +28,9 @@ class HomePage extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return AppScaffold(
       appBar: AppBar(
-        title: const Text('Dispositivos'),
+        title: const Text('Dispositivos', style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           const NotificationBell(),
-          IconButton(
-            tooltip: 'Testar notificações',
-            onPressed: controller.triggerNotificationWorkerTest,
-            icon: const Icon(Icons.bug_report_outlined),
-          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: controller.loadDevices),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
@@ -73,10 +69,27 @@ class HomePage extends GetView<HomeController> {
                 Obx(
                   () => _SoftCard(
                     borderRadius: 100,
-                    child: IconButton(
-                      tooltip: controller.isMapView.value ? 'Ver lista' : 'Ver mapa',
-                      onPressed: controller.toggleMapView,
-                      icon: Icon(controller.isMapView.value ? Icons.list : Icons.location_on),
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _ViewModeButton(
+                          icon: Icons.view_list_rounded,
+                          tooltip: 'Ver lista',
+                          selected: !controller.isMapView.value,
+                          onTap: () {
+                            if (controller.isMapView.value) controller.toggleMapView();
+                          },
+                        ),
+                        _ViewModeButton(
+                          icon: Icons.map_rounded,
+                          tooltip: 'Ver mapa',
+                          selected: controller.isMapView.value,
+                          onTap: () {
+                            if (!controller.isMapView.value) controller.toggleMapView();
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -179,7 +192,6 @@ class HomePage extends GetView<HomeController> {
                             status: device.status,
                             loading: device.loading.value,
                             charge: device.attributes.charge,
-                            reachedTarget: device.tripReachedTarget,
                             onTap:
                                 () => GenericModalMolecule.show(
                                   context: context,
@@ -193,7 +205,8 @@ class HomePage extends GetView<HomeController> {
 
                                 final isLoading = device.loading.value;
                                 final isBlocked = lockState.value == true;
-                                final lockColor = lockState.value == null ? Colors.grey : (isBlocked ? Colors.red : Colors.green);
+                                final lockColor =
+                                    lockState.value == null ? AppColors.gray : (isBlocked ? AppColors.error : AppColors.success);
 
                                 if (isLoading) {
                                   return const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
@@ -257,7 +270,7 @@ void _confirmToggle(BuildContext context, bool isBlocked, {required VoidCallback
       actions: [
         TextButton(onPressed: () => Get.back(), child: const Text("Cancelar")),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: isBlocked ? Colors.green : Colors.red),
+          style: ElevatedButton.styleFrom(backgroundColor: isBlocked ? AppColors.success : AppColors.error),
           onPressed: () {
             Get.back();
             onConfirm();
@@ -267,6 +280,32 @@ void _confirmToggle(BuildContext context, bool isBlocked, {required VoidCallback
       ],
     ),
   );
+}
+
+/// Botão de um controle segmentado lista/mapa — deixa explícito qual dos
+/// dois modos está ativo (em vez de um ícone só trocando de forma ambígua).
+class _ViewModeButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ViewModeButton({required this.icon, required this.tooltip, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(color: selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent, shape: BoxShape.circle),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, size: 20, color: selected ? AppColors.primary : AppColors.gray),
+      ),
+    );
+  }
 }
 
 /// Card arredondado com sombra suave — usado na busca e no botão de troca de

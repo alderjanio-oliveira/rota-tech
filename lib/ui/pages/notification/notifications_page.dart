@@ -3,6 +3,7 @@ import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/core/ui/drawer/scaffold/app_scaffold.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/device_model.dart';
+import 'package:app_tracking/data/distance_reminder_model.dart';
 import 'package:app_tracking/data/notification_state.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/ui/model/app_notification_model.dart';
@@ -35,26 +36,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
       appBar: AppBar(
         title: const Text('Notificações'),
         actions: [
-          IconButton(
-            tooltip: 'Limpar',
-            onPressed: () => state.clearNotifications(),
-            icon: const Icon(Icons.delete_outline),
-          ),
-          IconButton(
-            tooltip: 'Atualizar',
-            onPressed: () => state.loadNotifications(),
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(tooltip: 'Limpar', onPressed: () => state.clearNotifications(), icon: const Icon(Icons.delete_outline)),
+          IconButton(tooltip: 'Atualizar', onPressed: () => state.loadNotifications(), icon: const Icon(Icons.refresh)),
         ],
       ),
       body: Obx(() {
         if (state.notifications.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('Nenhuma notificação registrada.'),
-            ),
-          );
+          return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Nenhuma notificação registrada.')));
         }
 
         return ListView.separated(
@@ -85,10 +73,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         content: TextField(
           controller: targetController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Nova meta em km',
-            hintText: 'Ex: 1000',
-          ),
+          decoration: const InputDecoration(labelText: 'Nova meta em km', hintText: 'Ex: 1000'),
         ),
         actions: [
           TextButton(onPressed: Get.back, child: const Text('Cancelar')),
@@ -127,15 +112,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
       return;
     }
 
-    final tripKey = device.attributes.trip?.name ?? 'tripA';
-    final success = await Get.find<TraccarService>().updateDeviceTrip(
-      device: device,
-      tripKey: tripKey,
-      offset: totalDistance,
-      target: target,
+    final traccarService = Get.find<TraccarService>();
+
+    // Fecha o(s) lembrete(s) pendente(s) antes de abrir um novo.
+    final reminders = await traccarService.getDistanceReminders(device.id);
+    final pending = reminders.map(DistanceReminder.fromJson).where((r) => r.isPending).toList();
+    for (final reminder in pending) {
+      await traccarService.confirmDistanceReminder(reminder.id);
+    }
+
+    final created = await traccarService.createDistanceReminder(
+      deviceId: device.id,
+      name: pending.firstOrNull?.name ?? 'Troca de óleo',
+      thresholdDistance: target * 1000,
+      startValue: totalDistance,
     );
 
-    if (!success) {
+    if (created == null) {
       Get.snackbar('Erro', 'Não foi possível zerar a quilometragem.');
       return;
     }
@@ -166,33 +159,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
 
     final traccarService = Get.find<TraccarService>();
-    final clientsData = await traccarService.getClients();
-    final permissions = await traccarService.getDevicesPerUser();
-    Map<String, dynamic>? permission;
-    for (final item in permissions) {
-      if (item['deviceId'] == deviceId) {
-        permission = item;
-        break;
-      }
-    }
-    if (permission == null) {
+    final users = await traccarService.getUsersByDevice(deviceId);
+    final owner = users.firstWhereOrNull((u) => u['administrator'] != true);
+    if (owner == null) {
       Get.snackbar('Cliente não encontrado', 'Não encontrei o cliente vinculado a este veículo.');
       return;
     }
 
-    Map<String, dynamic>? clientData;
-    for (final item in clientsData) {
-      if (item['id'] == permission['userId']) {
-        clientData = item;
-        break;
-      }
-    }
-    if (clientData == null) {
-      Get.snackbar('Cliente não encontrado', 'Não encontrei os dados do cliente vinculado.');
-      return;
-    }
-
-    final client = ClientModel.fromMap(clientData);
+    final ownerAttributes = owner['attributes'] ?? {};
+    final client = ClientModel.fromMap({
+      'id': owner['id'],
+      'name': owner['name'],
+      'email': owner['email'],
+      'phone': owner['phone'],
+      'contractStart': ownerAttributes['contractStart'],
+      'expiresAt': ownerAttributes['expiresAt'] ?? owner['expirationTime'],
+      'notified': ownerAttributes['notified'] ?? false,
+    });
     final phone = client.phone?.replaceAll(RegExp(r'\D'), '') ?? '';
     if (phone.isEmpty) {
       Get.snackbar('Telefone não encontrado', 'O cliente não possui telefone cadastrado.');
@@ -278,11 +261,7 @@ class _NotificationCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  FilledButton.icon(
-                    onPressed: onResetTrip,
-                    icon: const Icon(Icons.restart_alt),
-                    label: const Text('Zerar e nova meta'),
-                  ),
+                  FilledButton.icon(onPressed: onResetTrip, icon: const Icon(Icons.restart_alt), label: const Text('Zerar e nova meta')),
                   OutlinedButton.icon(
                     onPressed: onSendOilMessage,
                     icon: const Icon(Icons.message_outlined),
@@ -290,7 +269,9 @@ class _NotificationCard extends StatelessWidget {
                   ),
                   OutlinedButton.icon(
                     onPressed: onToggleMute,
-                    icon: Icon(state.isDeviceMuted(notification.deviceId) ? Icons.notifications_active_outlined : Icons.notifications_off_outlined),
+                    icon: Icon(
+                      state.isDeviceMuted(notification.deviceId) ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
+                    ),
                     label: Text(state.isDeviceMuted(notification.deviceId) ? 'Reativar alertas' : 'Silenciar para mim'),
                   ),
                 ],
@@ -330,10 +311,7 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DetailRow({
-    required this.label,
-    required this.value,
-  });
+  const _DetailRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -341,13 +319,7 @@ class _DetailRow extends StatelessWidget {
       padding: const EdgeInsets.only(top: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 96,
-            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
-          ),
-          Expanded(child: Text(value)),
-        ],
+        children: [SizedBox(width: 96, child: Text(label, style: Theme.of(context).textTheme.bodySmall)), Expanded(child: Text(value))],
       ),
     );
   }

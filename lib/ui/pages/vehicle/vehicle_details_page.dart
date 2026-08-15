@@ -1,4 +1,3 @@
-import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/app/services/km_report_pdf.dart';
 import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
@@ -29,56 +28,65 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
         },
       ),
 
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          /// 🚗 HEADER
+          _VehicleHeader(device: controller.device),
 
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            /// 🚗 HEADER
-            _VehicleHeader(device: controller.device),
+          Obx(
+            () =>
+                controller.reminderReached
+                    ? const Padding(padding: EdgeInsets.only(top: 16), child: _TripTargetReachedBanner())
+                    : const SizedBox.shrink(),
+          ),
 
-            if (controller.liveDevice.tripReachedTarget) ...[const SizedBox(height: 16), const _TripTargetReachedBanner()],
+          const SizedBox(height: 16),
 
-            const SizedBox(height: 16),
+          /// 👤 VÍNCULO
+          _LinkedClientCard(controller: controller),
 
-            /// 👤 VÍNCULO
-            _LinkedClientCard(controller: controller),
+          const SizedBox(height: 16),
 
-            const SizedBox(height: 16),
+          /// 📊 KPIs (SEM QUEBRAR)
+          _KpiSection(controller: controller),
 
-            /// 📊 KPIs (SEM QUEBRAR)
-            _KpiSection(controller: controller),
+          const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
+          Text('Últimas quilometragens', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            'Consultado direto no servidor — não existe um histórico salvo localmente. Use o filtro para escolher o período.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
 
-            Text('Últimas quilometragens', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(
-              'Consultado direto no servidor — não existe um histórico salvo localmente. Use o filtro para outros períodos.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
+          /// 🎯 FILTRO
+          DateFilterCard(controller: controller),
 
-            /// 🎯 FILTRO
-            DateFilterCard(controller: controller),
+          const SizedBox(height: 12),
 
-            const SizedBox(height: 12),
+          /// 📈 LISTA — carregamento isolado, não trava o resto da tela.
+          Obx(() {
+            if (controller.isLoading.value) {
+              return const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: CircularProgressIndicator()));
+            }
+            if (controller.dailyKmList.isEmpty) {
+              return const Column(
+                children: [Icon(Icons.insights, size: 40, color: Colors.grey), SizedBox(height: 8), Text("Nenhum dado no período")],
+              );
+            }
+            return Column(
+              children:
+                  controller.dailyKmList
+                      .map((item) => Padding(padding: const EdgeInsets.only(bottom: 8), child: KmDayItem(item: item)))
+                      .toList(),
+            );
+          }),
 
-            /// 📈 LISTA
-            if (controller.dailyKmList.isEmpty)
-              Column(
-                children: const [Icon(Icons.insights, size: 40, color: Colors.grey), SizedBox(height: 8), Text("Nenhum dado no período")],
-              )
-            else
-              ...controller.dailyKmList.map((item) => Padding(padding: const EdgeInsets.only(bottom: 8), child: KmDayItem(item: item))),
-
-            const SizedBox(height: 100),
-          ],
-        );
-      }),
+          const SizedBox(height: 100),
+        ],
+      ),
     );
   }
 }
@@ -140,7 +148,7 @@ class _TripTargetReachedBanner extends StatelessWidget {
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
-              'Este veículo já atingiu a meta de quilometragem da Trip A. Zere a trip para limpar este aviso.',
+              'Este veículo já atingiu a meta de quilometragem da Trip A. Registre uma nova meta para limpar este aviso.',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
@@ -220,30 +228,74 @@ class _KpiSection extends StatelessWidget {
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Theme.of(context).cardColor),
       child: Row(
         children: [
-          Expanded(child: _KpiItem(label: "Trip A", value: controller.tripFormatted, icon: Icons.route, onTap: () => _showReset(context))),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoadingReminder.value || controller.isSavingReminder.value) {
+                return _KpiItem(label: "Trip A", value: null, icon: Icons.route, onTap: () => _showReminderForm(context));
+              }
+              final traveled = controller.reminderTraveledKm;
+              final target = controller.reminderTargetKm;
+              final tripValue = target == null ? 'Sem meta' : '${(traveled ?? 0).toStringAsFixed(1)} / ${target.toStringAsFixed(0)} km';
+              return _KpiItem(label: "Trip A", value: tripValue, icon: Icons.route, onTap: () => _showReminderForm(context));
+            }),
+          ),
           Container(width: 1, height: 40, color: Colors.grey.withOpacity(0.3)),
-          Expanded(child: _KpiItem(label: "Total", value: "${controller.totalKm.value} km", icon: Icons.speed)),
+          Expanded(
+            child: Obx(() => _KpiItem(label: "Total", value: "${controller.totalKm.value.toStringAsFixed(2)} km", icon: Icons.speed)),
+          ),
         ],
       ),
     );
   }
 
-  void _showReset(BuildContext context) {
+  void _showReminderForm(BuildContext context) {
+    final current = controller.activeReminder.value;
+    final nameController = TextEditingController(text: current?.name ?? 'Troca de óleo');
+    final targetController = TextEditingController(text: controller.reminderTargetKm?.toStringAsFixed(0) ?? '1000');
+
     GenericModalMolecule.show(
       context: context,
-      title: 'Zerar Trip',
-      description: 'Informe a meta em KM',
-      primaryMethod: () {
-        controller.resetTip(
-          'trip A',
-          controller.target.text.isEmpty ? 0.0 : double.tryParse(controller.target.text.replaceAll(',', '.')) ?? 0.0,
-        );
+      title: current == null ? 'Nova meta de km' : 'Zerar e nova meta',
+      description:
+          current == null
+              ? 'Dê um nome ao lembrete e informe a meta em km'
+              : 'O lembrete atual será encerrado e um novo será criado a partir de agora',
+      primaryMethod: () async {
+        final name = nameController.text.trim();
+        final target = double.tryParse(targetController.text.replaceAll(',', '.'));
+
+        if (name.isEmpty) {
+          Get.snackbar('Nome obrigatório', 'Dê um nome ao lembrete.');
+          return;
+        }
+        if (target == null || target <= 0) {
+          Get.snackbar('Meta inválida', 'Informe uma meta maior que zero.');
+          return;
+        }
+
+        final success = await controller.saveReminder(name: name, targetKm: target);
+        if (!success) {
+          Get.snackbar('Erro', controller.reminderError.value ?? 'Não foi possível salvar o lembrete.');
+        } else {
+          Get.snackbar('Meta salva', 'A meta de quilometragem foi registrada.');
+        }
       },
-      body: TextFormField(
-        controller: controller.target,
-        keyboardType: TextInputType.number,
-        textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(labelText: 'Meta (km)', border: OutlineInputBorder()),
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: nameController,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(labelText: 'Nome', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: targetController,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(labelText: 'Meta (km)', border: OutlineInputBorder()),
+          ),
+        ],
       ),
       secondyMethod: () {},
     );
@@ -252,7 +304,7 @@ class _KpiSection extends StatelessWidget {
 
 class _KpiItem extends StatelessWidget {
   final String label;
-  final String value;
+  final String? value;
   final IconData icon;
   final VoidCallback? onTap;
 
@@ -269,7 +321,9 @@ class _KpiItem extends StatelessWidget {
           const SizedBox(height: 6),
           Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          value == null
+              ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(value!, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:app_tracking/ui/atoms/status_badge.dart';
+import 'package:app_tracking/ui/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class DeviceCard extends StatelessWidget {
@@ -47,12 +48,14 @@ class DeviceCard extends StatelessWidget {
           boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black.withOpacity(0.05))],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// 🚗 ICON
+            /// 🚗 ICON — fundo suave em vez de preenchimento sólido, visual
+            /// mais leve e alinhado ao padrão de "chip" do StatusBadge.
             CircleAvatar(
               radius: 24,
-              backgroundColor: isOn ? Colors.green : Colors.grey,
-              child: const Icon(Icons.directions_car, color: Colors.white),
+              backgroundColor: (isOn ? AppColors.success : AppColors.gray).withOpacity(0.15),
+              child: Icon(Icons.directions_car_rounded, color: isOn ? AppColors.success : AppColors.gray, size: 22),
             ),
 
             const SizedBox(width: 12),
@@ -72,16 +75,22 @@ class DeviceCard extends StatelessWidget {
                         ),
                       ),
                       if (reachedTarget) ...[
-                        const StatusBadge(icon: Icons.notifications_active, color: Colors.orange),
+                        const StatusBadge(icon: Icons.notifications_active, color: AppColors.warning),
                         const SizedBox(width: 6),
                       ],
-                      StatusBadge(icon: Icons.battery_charging_full, color: charge == null ? null : (charge! ? Colors.green : Colors.red)),
+                      StatusBadge(
+                        icon: Icons.battery_charging_full,
+                        color: charge == null ? null : (charge! ? AppColors.success : AppColors.error),
+                      ),
                     ],
                   ),
 
                   const SizedBox(height: 4),
 
-                  Text(isOn ? "Ligado" : "Desligado", style: TextStyle(color: isOn ? Colors.green : Colors.grey, fontSize: 12)),
+                  Text(
+                    isOn ? "Ligado" : "Desligado",
+                    style: TextStyle(color: isOn ? AppColors.success : AppColors.gray, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
 
                   if (address != null) ...[
                     const SizedBox(height: 4),

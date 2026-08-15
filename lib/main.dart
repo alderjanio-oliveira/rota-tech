@@ -3,12 +3,11 @@ import 'package:app_tracking/core/bindings/main.binding.dart';
 import 'package:app_tracking/core/i18n/translation.dart';
 import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/routes/routes.dart';
+import 'package:app_tracking/core/services/auth_service.dart';
+import 'package:app_tracking/core/services/auth_storage_service.dart';
 import 'package:app_tracking/core/services/notification_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/core/services/work_manager_service.dart';
-import 'package:app_tracking/ui/controllers/warnings/warning_controller.dart';
-import 'package:app_tracking/ui/pages/home/home_page.dart';
-import 'package:app_tracking/ui/pages/infos/trip_details_page.dart';
 import 'package:app_tracking/ui/pages/login/login_page.dart';
 import 'package:app_tracking/ui/pages/splash/splash_page.dart';
 import 'package:app_tracking/ui/theme/app_theme.dart';
@@ -74,34 +73,49 @@ class MyApp extends StatelessWidget {
 
   choiseFirstPage(data) {
     if (data == true) {
-      if (notificationPayload != null) return const NotificationsLaunchPage();
-      if (Get.isRegistered<WarningController>()) return TripDetailsPage();
-      return HomePage();
+      if (notificationPayload != null) return const _RouteRedirect(route: Routes.NOTIFICATIONS);
+      // Precisa passar pelo roteador (não retornar HomePage() direto) pra
+      // HomeBinding rodar — senão HomeController/MapCustomController nunca
+      // são registrados e a Home quebra ao tentar encontrá-los.
+      return const _RouteRedirect(route: Routes.HOME);
     } else {
       return LoginPage(notificationPayload: notificationPayload);
     }
   }
 
   Future<bool> _checkAuth() async {
-    // Aqui você pode verificar se existe sessão salva
     if (Get.isRegistered<UserSessionService>()) {
       final sessionId = Get.find<UserSessionService>().sessionId;
       if (sessionId.isNotEmpty) {
-        // Tente validar a sessão com o backend, se necessário
         return true;
       }
     }
-    return false;
+
+    // "Lembrar de mim" — tenta logar de verdade (não só preencher o
+    // formulário) enquanto a splash ainda está na tela.
+    final authStorage = AuthStorageService();
+    if (!await authStorage.rememberMe()) return false;
+
+    final email = await authStorage.getEmail();
+    final password = await authStorage.getPassword();
+    if (email == null || password == null || email.isEmpty || password.isEmpty) return false;
+
+    return Get.find<AuthService>().login(email, password);
   }
 }
 
-class NotificationsLaunchPage extends StatelessWidget {
-  const NotificationsLaunchPage({super.key});
+/// Mostra a splash por um frame e redireciona via rota nomeada — necessário
+/// pra o binding da rota rodar (retornar a page direto, sem navegar, pula o
+/// binding e quebra qualquer tela que dependa de Get.find).
+class _RouteRedirect extends StatelessWidget {
+  final String route;
+
+  const _RouteRedirect({required this.route});
 
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.offAllNamed(Routes.NOTIFICATIONS);
+      Get.offAllNamed(route);
     });
 
     return const SplashPage();

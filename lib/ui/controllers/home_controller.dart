@@ -7,10 +7,8 @@ import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
-import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:workmanager/workmanager.dart';
 
 class HomeController extends GetxController with WidgetsBindingObserver {
   final TraccarService traccarService;
@@ -135,15 +133,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       errorMessage.value = 'Erro ao carregar dispositivos';
       isLoading.value = false;
     }
-  }
-
-  Future<void> triggerNotificationWorkerTest() async {
-    await Workmanager().registerOneOffTask(
-      'trip_manual_home_${DateTime.now().millisecondsSinceEpoch}',
-      Constants.taskTripAlert,
-      initialDelay: const Duration(seconds: 3),
-    );
-    Get.snackbar('Teste agendado', 'O Workmanager vai executar a verificação em alguns segundos.');
   }
 
   // =======================

@@ -40,6 +40,10 @@ class VehicleDetailsController extends GetxController {
   final RxBool isLoadingReminder = false.obs;
   final RxBool isSavingReminder = false.obs;
 
+  /// Metas de km já concluídas/canceladas (mesma tabela do backend, só que
+  /// filtrando o que não está mais pendente) — histórico de "zeradas".
+  final RxList<DistanceReminder> reminderHistory = <DistanceReminder>[].obs;
+
   double? get _totalDistance => liveDevice.attributes.totalDistance;
 
   double? get reminderTraveledKm {
@@ -102,8 +106,13 @@ class VehicleDetailsController extends GetxController {
     try {
       isLoadingReminder.value = true;
       final raw = await traccarService.getDistanceReminders(device.id);
-      final pending = raw.map(DistanceReminder.fromJson).where((r) => r.isPending).toList();
-      activeReminder.value = pending.firstOrNull;
+      final reminders = raw.map(DistanceReminder.fromJson).toList();
+
+      activeReminder.value = reminders.where((r) => r.isPending).firstOrNull;
+
+      final history = reminders.where((r) => !r.isPending).toList()
+        ..sort((a, b) => (b.confirmedAt ?? b.cancelledAt ?? DateTime(0)).compareTo(a.confirmedAt ?? a.cancelledAt ?? DateTime(0)));
+      reminderHistory.value = history;
     } finally {
       isLoadingReminder.value = false;
     }
@@ -138,7 +147,9 @@ class VehicleDetailsController extends GetxController {
 
       if (created == null) return false;
 
-      activeReminder.value = DistanceReminder.fromJson(created);
+      // Recarrega da fonte (não só seta o novo local) pra já trazer o
+      // lembrete recém-confirmado pro histórico.
+      await _loadActiveReminder();
       return true;
     } catch (e) {
       reminderError.value = e.toString();

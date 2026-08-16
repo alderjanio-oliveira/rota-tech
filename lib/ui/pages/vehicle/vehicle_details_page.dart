@@ -2,6 +2,7 @@ import 'package:app_tracking/app/services/km_report_pdf.dart';
 import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/device_model.dart';
+import 'package:app_tracking/data/distance_reminder_model.dart';
 import 'package:app_tracking/ui/controllers/vehicles/vehicles_detail_controller.dart';
 import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
 import 'package:app_tracking/ui/pages/vehicle/widgets/data_filter.dart';
@@ -35,10 +36,9 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
           _VehicleHeader(device: controller.device),
 
           Obx(
-            () =>
-                controller.reminderReached
-                    ? const Padding(padding: EdgeInsets.only(top: 16), child: _TripTargetReachedBanner())
-                    : const SizedBox.shrink(),
+            () => controller.reminderReached
+                ? const Padding(padding: EdgeInsets.only(top: 16), child: _TripTargetReachedBanner())
+                : const SizedBox.shrink(),
           ),
 
           const SizedBox(height: 16),
@@ -52,6 +52,30 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
           _KpiSection(controller: controller),
 
           const SizedBox(height: 24),
+
+          /// 🧾 HISTÓRICO DE METAS ZERADAS (Trip A) — vem da mesma tabela do
+          /// backend, só que trazendo o que já foi confirmado/cancelado.
+          Obx(() {
+            if (controller.reminderHistory.isEmpty) return const SizedBox.shrink();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Histórico de quilometragem zerada',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                ...controller.reminderHistory.map(
+                  (reminder) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ReminderHistoryItem(reminder: reminder),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            );
+          }),
 
           Text('Últimas quilometragens', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
@@ -69,18 +93,29 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
           /// 📈 LISTA — carregamento isolado, não trava o resto da tela.
           Obx(() {
             if (controller.isLoading.value) {
-              return const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: CircularProgressIndicator()));
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator()),
+              );
             }
             if (controller.dailyKmList.isEmpty) {
               return const Column(
-                children: [Icon(Icons.insights, size: 40, color: Colors.grey), SizedBox(height: 8), Text("Nenhum dado no período")],
+                children: [
+                  Icon(Icons.insights, size: 40, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text("Nenhum dado no período"),
+                ],
               );
             }
             return Column(
-              children:
-                  controller.dailyKmList
-                      .map((item) => Padding(padding: const EdgeInsets.only(bottom: 8), child: KmDayItem(item: item)))
-                      .toList(),
+              children: controller.dailyKmList
+                  .map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: KmDayItem(item: item),
+                    ),
+                  )
+                  .toList(),
             );
           }),
 
@@ -256,10 +291,9 @@ class _KpiSection extends StatelessWidget {
     GenericModalMolecule.show(
       context: context,
       title: current == null ? 'Nova meta de km' : 'Zerar e nova meta',
-      description:
-          current == null
-              ? 'Dê um nome ao lembrete e informe a meta em km'
-              : 'O lembrete atual será encerrado e um novo será criado a partir de agora',
+      description: current == null
+          ? 'Dê um nome ao lembrete e informe a meta em km'
+          : 'O lembrete atual será encerrado e um novo será criado a partir de agora',
       primaryMethod: () async {
         final name = nameController.text.trim();
         final target = double.tryParse(targetController.text.replaceAll(',', '.'));
@@ -299,6 +333,56 @@ class _KpiSection extends StatelessWidget {
       ),
       secondyMethod: () {},
     );
+  }
+}
+
+/// Item do histórico de metas de km já concluídas/canceladas.
+class _ReminderHistoryItem extends StatelessWidget {
+  final DistanceReminder reminder;
+
+  const _ReminderHistoryItem({required this.reminder});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDone = reminder.status == DistanceReminder.statusDone;
+    final date = reminder.confirmedAt ?? reminder.cancelledAt;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: Theme.of(context).cardColor),
+      child: Row(
+        children: [
+          Icon(
+            isDone ? Icons.check_circle_outline : Icons.cancel_outlined,
+            color: isDone ? Colors.green : Colors.grey,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(reminder.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(
+                  isDone
+                      ? '${(reminder.traveledDistance / 1000).toStringAsFixed(2)} / ${(reminder.thresholdDistance / 1000).toStringAsFixed(0)} km'
+                      : 'Cancelado',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          if (date != null) Text(_formatDate(date), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 }
 

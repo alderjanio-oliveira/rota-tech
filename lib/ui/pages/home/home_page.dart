@@ -41,11 +41,14 @@ class HomePage extends GetView<HomeController> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: _SoftCard(
-                    borderRadius: 24,
+                  child: Material(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                    elevation: 3,
+                    shadowColor: Colors.black.withOpacity(0.12),
                     child: TextField(
                       controller: controller.searchController,
                       onChanged: (v) => controller.search.value = v,
@@ -53,46 +56,19 @@ class HomePage extends GetView<HomeController> {
                         hintText: 'Buscar dispositivo...',
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: Obx(
-                          () =>
-                              controller.search.value.isEmpty
-                                  ? const SizedBox.shrink()
-                                  : IconButton(icon: const Icon(Icons.close), onPressed: controller.clearSearch),
+                          () => controller.search.value.isEmpty
+                              ? const SizedBox.shrink()
+                              : IconButton(icon: const Icon(Icons.close), onPressed: controller.clearSearch),
                         ),
-                        border: InputBorder.none,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Obx(
-                  () => _SoftCard(
-                    borderRadius: 100,
-                    padding: const EdgeInsets.all(4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _ViewModeButton(
-                          icon: Icons.view_list_rounded,
-                          tooltip: 'Ver lista',
-                          selected: !controller.isMapView.value,
-                          onTap: () {
-                            if (controller.isMapView.value) controller.toggleMapView();
-                          },
-                        ),
-                        _ViewModeButton(
-                          icon: Icons.map_rounded,
-                          tooltip: 'Ver mapa',
-                          selected: controller.isMapView.value,
-                          onTap: () {
-                            if (!controller.isMapView.value) controller.toggleMapView();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                Obx(() => _ViewModeToggleButton(isMapView: controller.isMapView.value, onTap: controller.toggleMapView)),
               ],
             ),
           ),
@@ -101,11 +77,10 @@ class HomePage extends GetView<HomeController> {
             if (query.length < kSearchSuggestionsMinChars) return const SizedBox.shrink();
 
             final normalizedQuery = Utils.normalizeSearch(query);
-            final suggestions =
-                controller.vehicles.list
-                    .where((d) => Utils.normalizeSearch(d.name).contains(normalizedQuery))
-                    .take(kSearchSuggestionsLimit)
-                    .toList();
+            final suggestions = controller.vehicles.list
+                .where((d) => Utils.normalizeSearch(d.name).contains(normalizedQuery))
+                .take(kSearchSuggestionsLimit)
+                .toList();
 
             if (suggestions.isEmpty) return const SizedBox.shrink();
 
@@ -116,20 +91,19 @@ class HomePage extends GetView<HomeController> {
                 padding: EdgeInsets.zero,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children:
-                      suggestions
-                          .map(
-                            (d) => ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.directions_car_outlined, size: 20),
-                              title: Text(d.name),
-                              onTap: () {
-                                controller.selectSearchSuggestion(d.name);
-                                FocusScope.of(context).unfocus();
-                              },
-                            ),
-                          )
-                          .toList(),
+                  children: suggestions
+                      .map(
+                        (d) => ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.directions_car_outlined, size: 20),
+                          title: Text(d.name),
+                          onTap: () {
+                            controller.selectSearchSuggestion(d.name);
+                            FocusScope.of(context).unfocus();
+                          },
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             );
@@ -163,10 +137,9 @@ class HomePage extends GetView<HomeController> {
                 children: [
                   Obx(() {
                     final query = Utils.normalizeSearch(controller.search.value.trim());
-                    final devices =
-                        query.isEmpty
-                            ? controller.vehicles.list
-                            : controller.vehicles.list.where((d) => Utils.normalizeSearch(d.name).contains(query)).toList();
+                    final devices = query.isEmpty
+                        ? controller.vehicles.list
+                        : controller.vehicles.list.where((d) => Utils.normalizeSearch(d.name).contains(query)).toList();
 
                     return ListView.builder(
                       padding: const EdgeInsets.all(16),
@@ -192,21 +165,21 @@ class HomePage extends GetView<HomeController> {
                             status: device.status,
                             loading: device.loading.value,
                             charge: device.attributes.charge,
-                            onTap:
-                                () => GenericModalMolecule.show(
-                                  context: context,
-                                  title: 'Deseja ver os detalhes do veículo?',
-                                  primaryMethod: () => Get.toNamed(Routes.VEHICLE_DETAILS, arguments: device),
-                                  secondyMethod: () => Get.back(),
-                                ),
+                            onTap: () => GenericModalMolecule.show(
+                              context: context,
+                              title: 'Deseja ver os detalhes do veículo?',
+                              primaryMethod: () => Get.toNamed(Routes.VEHICLE_DETAILS, arguments: device),
+                              secondyMethod: () => Get.back(),
+                            ),
                             actions: [
                               Obx(() {
                                 final lockState = device.attributes.lockState;
 
                                 final isLoading = device.loading.value;
                                 final isBlocked = lockState.value == true;
-                                final lockColor =
-                                    lockState.value == null ? AppColors.gray : (isBlocked ? AppColors.error : AppColors.success);
+                                final lockColor = lockState.value == null
+                                    ? AppColors.gray
+                                    : (isBlocked ? AppColors.error : AppColors.success);
 
                                 if (isLoading) {
                                   return const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
@@ -282,27 +255,33 @@ void _confirmToggle(BuildContext context, bool isBlocked, {required VoidCallback
   );
 }
 
-/// Botão de um controle segmentado lista/mapa — deixa explícito qual dos
-/// dois modos está ativo (em vez de um ícone só trocando de forma ambígua).
-class _ViewModeButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final bool selected;
+/// Botão único de alternância lista/mapa — sempre mostra o ícone do modo
+/// PRA ONDE vai ao tocar (se está na lista, mostra "mapa", e vice-versa).
+class _ViewModeToggleButton extends StatelessWidget {
+  final bool isMapView;
   final VoidCallback onTap;
 
-  const _ViewModeButton({required this.icon, required this.tooltip, required this.selected, required this.onTap});
+  const _ViewModeToggleButton({required this.isMapView, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(color: selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent, shape: BoxShape.circle),
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 20, color: selected ? AppColors.primary : AppColors.gray),
+    return Material(
+      color: Theme.of(context).cardColor,
+      shape: const CircleBorder(),
+      elevation: 3,
+      shadowColor: Colors.black.withOpacity(0.12),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Icon(
+            isMapView ? Icons.view_list_rounded : Icons.map_rounded,
+            color: AppColors.primary,
+            size: 22,
+          ),
+        ),
       ),
     );
   }

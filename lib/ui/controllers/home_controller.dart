@@ -7,8 +7,10 @@ import 'package:app_tracking/core/services/position_event_handler.dart';
 import 'package:app_tracking/core/services/traccar_socket_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
+import 'package:app_tracking/utils/constants.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 class HomeController extends GetxController with WidgetsBindingObserver {
   final TraccarService traccarService;
@@ -22,8 +24,11 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
-  /// Alterna entre a lista de devices e o mapa na Home.
-  final RxBool isMapView = false.obs;
+  /// Alterna entre a lista de devices e o mapa na Home. Persistido em disco
+  /// pra continuar no mesmo modo mesmo se o controller for recriado (app
+  /// fechado/reaberto).
+  final _storage = GetStorage();
+  late final RxBool isMapView = (_storage.read<bool>(Constants.homeViewModeKey) ?? false).obs;
 
   /// Texto de busca — filtra a lista e, quando casa com um único device,
   /// centraliza o mapa nele.
@@ -68,6 +73,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
   void toggleMapView() {
     isMapView.value = !isMapView.value;
+    _storage.write(Constants.homeViewModeKey, isMapView.value);
   }
 
   void clearSearch() {

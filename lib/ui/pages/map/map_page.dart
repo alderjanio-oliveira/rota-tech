@@ -9,9 +9,11 @@ import 'package:app_tracking/ui/pages/home/widgets/egine_action_modal.dart';
 import 'package:app_tracking/ui/theme/app_colors.dart';
 import 'package:app_tracking/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class MapWidget extends StatefulWidget {
@@ -80,6 +82,7 @@ class _MapWidgetState extends State<MapWidget> {
     if (matches.length != 1) return;
 
     final device = matches.first;
+    controller.clearRoute();
     setState(() => _selectedDeviceId = device.id);
     mapController.move(LatLng(device.latitude, device.longitude), 17);
   }
@@ -95,33 +98,63 @@ class _MapWidgetState extends State<MapWidget> {
           mapController: mapController,
           options: MapOptions(
             onTap: (_, __) {
+              controller.clearRoute();
               setState(() {
                 _selectedDeviceId = null;
               });
             },
           ),
           children: [
-            /// TILE — Esri World Street Map / Dark Gray Canvas: sem chave de
-            /// API, visual limpo tipo Google Maps. Atenção: o REST tile
-            /// service da Esri usa a ordem {z}/{y}/{x} (y antes de x).
+            /// TILE — Mapbox streets-v12 / dark-v11. Atenção: ordem padrão
+            /// {z}/{x}/{y} (diferente da Esri, que usava {z}/{y}/{x}).
             TileLayer(
               urlTemplate:
-                  isDark
-                      ? 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-                      : 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+                  'https://api.mapbox.com/styles/v1/mapbox/${isDark ? "dark-v11" : "streets-v12"}/tiles/{z}/{x}/{y}{r}'
+                  '?access_token=${dotenv.env['MAP_BOX_TOKEN']}',
+              retinaMode: RetinaMode.isHighDensity(context),
               userAgentPackageName: 'com.example.app_tracking',
             ),
 
-            /// TRILHAS
+            /// TRILHAS — cada trecho (entre hiatos de sinal) é uma Polyline
+            /// separada, então um hiato (tela bloqueada, sem sinal) aparece
+            /// como uma quebra na trilha, nunca como uma linha reta ligando
+            /// o ponto de antes ao de depois.
             Obx(() {
-              if (controller.trails.isEmpty) return const SizedBox();
+              final polylines = <Polyline>[
+                for (final segments in controller.trails.values)
+                  for (final segment in segments)
+                    if (segment.length > 1)
+                      Polyline(
+                        points: segment,
+                        strokeWidth: 4,
+                        color: AppColors.primary.withOpacity(0.85),
+                        borderStrokeWidth: 1.5,
+                        borderColor: (isDark ? Colors.black : Colors.white).withOpacity(0.6),
+                      ),
+              ];
+
+              if (polylines.isEmpty) return const SizedBox();
+
+              return PolylineLayer(polylines: polylines);
+            }),
+
+            /// ROTA até o veículo selecionado — tracejada, cor diferente da
+            /// trilha (que é o caminho já percorrido; essa é a pra chegar lá).
+            Obx(() {
+              final route = controller.routeToDevice.value;
+              if (route == null || route.length < 2) return const SizedBox();
 
               return PolylineLayer(
-                polylines:
-                    controller.trails.entries
-                        .where((e) => e.value.isNotEmpty)
-                        .map((e) => Polyline(points: e.value, strokeWidth: 4, color: AppColors.primary.withOpacity(0.8)))
-                        .toList(),
+                polylines: [
+                  Polyline(
+                    points: route,
+                    strokeWidth: 5,
+                    color: Colors.blueAccent.withOpacity(0.9),
+                    pattern: StrokePattern.dashed(segments: [12, 8]),
+                    borderStrokeWidth: 1.5,
+                    borderColor: (isDark ? Colors.black : Colors.white).withOpacity(0.6),
+                  ),
+                ],
               );
             }),
 
@@ -139,60 +172,68 @@ class _MapWidgetState extends State<MapWidget> {
               }
 
               return MarkerLayer(
-                markers:
-                    validDevices.map((d) {
-                      final isSelected = _selectedDeviceId == d.id;
+                markers: validDevices.map((d) {
+                  final isSelected = _selectedDeviceId == d.id;
 
-                      return Marker(
-                        width: 90,
-                        height: 70,
-                        point: LatLng(d.latitude, d.longitude),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedDeviceId = d.id;
-                            });
-                          },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Transform.rotate(
-                                angle: d.heading * (pi / 180),
-                                child: _VehicleMarker(isActive: d.ignition, isSelected: isSelected),
-                              ),
-                              const SizedBox(height: 2),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(6)),
-                                child: Text(
-                                  d.name,
-                                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                  return Marker(
+                    width: 90,
+                    height: 70,
+                    point: LatLng(d.latitude, d.longitude),
+                    // O ícone é o primeiro item da Column (rótulo do nome vem
+                    // depois, abaixo dele) — ancora o ponto geográfico no
+                    // topo do widget, senão o flutter_map centraliza o bloco
+                    // inteiro (ícone + rótulo) no ponto, e o ícone acaba
+                    // desenhado acima da coordenada real / ponta da trilha.
+                    alignment: Alignment.bottomCenter,
+                    child: GestureDetector(
+                      onTap: () {
+                        if (_selectedDeviceId != d.id) controller.clearRoute();
+                        setState(() {
+                          _selectedDeviceId = d.id;
+                        });
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Transform.rotate(
+                            angle: d.heading * (pi / 180),
+                            child: _VehicleMarker(isActive: d.ignition, isSelected: isSelected),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(6)),
+                            child: Text(
+                              d.name,
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
               );
             }),
 
-            /// ATRIBUIÇÃO (obrigatória pela Esri)
+            /// ATRIBUIÇÃO (obrigatória pelos termos do Mapbox)
             RichAttributionWidget(
               alignment: AttributionAlignment.bottomLeft,
               attributions: [
-                TextSourceAttribution(
-                  'Esri, HERE, Garmin, FAO, NOAA, USGS',
-                  onTap: () => launchUrlString('https://www.esri.com/en-us/legal/copyright-trademarks'),
-                ),
+                TextSourceAttribution('© Mapbox', onTap: () => launchUrlString('https://www.mapbox.com/about/maps/')),
+                TextSourceAttribution('© OpenStreetMap', onTap: () => launchUrlString('https://www.openstreetmap.org/copyright')),
               ],
             ),
           ],
         ),
 
         /// TROCAR VEÍCULO (um por um)
-        Positioned(top: 16, right: 16, child: _MapButton(icon: Icons.swap_horiz, onTap: _selectNextDevice)),
+        Positioned(
+          top: 16,
+          right: 16,
+          child: _MapButton(icon: Icons.swap_horiz, onTap: _selectNextDevice),
+        ),
 
         /// BALÃO DE FILTRO (ex.: "motos do cliente X") — some ao tocar no x.
         Positioned(
@@ -245,16 +286,24 @@ class _MapWidgetState extends State<MapWidget> {
                   transitionBuilder: (child, animation) {
                     final slide = Tween(begin: const Offset(0, 1), end: Offset.zero).animate(animation);
 
-                    return SlideTransition(position: slide, child: FadeTransition(opacity: animation, child: child));
+                    return SlideTransition(
+                      position: slide,
+                      child: FadeTransition(opacity: animation, child: child),
+                    );
                   },
-                  child:
-                      device == null
-                          ? const SizedBox()
-                          : GestureDetector(
-                            key: ValueKey(device.id),
-                            onTap: () => _openDetails(device),
-                            child: _VehicleInfoCard(device: device),
+                  child: device == null
+                      ? const SizedBox()
+                      : GestureDetector(
+                          key: ValueKey(device.id),
+                          onTap: () => _openDetails(device),
+                          child: _VehicleInfoCard(
+                            device: device,
+                            isTracingRoute: controller.isTracingRoute.value,
+                            hasRoute: controller.routeToDevice.value != null,
+                            onTraceRoute: () => _traceRoute(device),
+                            onClearRoute: controller.clearRoute,
                           ),
+                        ),
                 ),
               ],
             );
@@ -290,6 +339,7 @@ class _MapWidgetState extends State<MapWidget> {
     final currentIndex = list.indexWhere((d) => d.id == _selectedDeviceId);
     final next = list[(currentIndex + 1) % list.length];
 
+    controller.clearRoute();
     setState(() => _selectedDeviceId = next.id);
     mapController.move(LatLng(next.latitude, next.longitude), 17);
   }
@@ -299,6 +349,15 @@ class _MapWidgetState extends State<MapWidget> {
     if (vehicle == null) return;
 
     Get.toNamed(Routes.VEHICLE_DETAILS, arguments: vehicle);
+  }
+
+  Future<void> _traceRoute(DevicePosition device) async {
+    await controller.traceRouteTo(device);
+
+    final error = controller.routeError.value;
+    if (error != null) {
+      Get.snackbar('Rota', error);
+    }
   }
 
   void _toggleLock(DevicePosition device) {
@@ -363,7 +422,11 @@ class _FilterBadge extends StatelessWidget {
             Icon(Icons.person, size: 16, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 6),
             Flexible(
-              child: Text(label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
             ),
             IconButton(
               tooltip: 'Voltar à visualização padrão',
@@ -408,8 +471,19 @@ class _VehicleMarker extends StatelessWidget {
 /// CARD
 class _VehicleInfoCard extends StatelessWidget {
   final dynamic device;
+  final bool isTracingRoute;
+  final bool hasRoute;
+  final VoidCallback onTraceRoute;
+  final VoidCallback onClearRoute;
 
-  const _VehicleInfoCard({super.key, required this.device});
+  const _VehicleInfoCard({
+    super.key,
+    required this.device,
+    required this.isTracingRoute,
+    required this.hasRoute,
+    required this.onTraceRoute,
+    required this.onClearRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -431,7 +505,9 @@ class _VehicleInfoCard extends StatelessWidget {
                   child: Icon(Icons.directions_car_rounded, color: isOn ? AppColors.success : AppColors.gray),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(
+                  child: Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
                 StatusBadge(
                   icon: Icons.battery_charging_full,
                   color: device.charge == null ? null : (device.charge == true ? AppColors.success : AppColors.error),
@@ -442,7 +518,10 @@ class _VehicleInfoCard extends StatelessWidget {
                   color: device.blocked == null ? null : (device.blocked == true ? AppColors.error : AppColors.success),
                 ),
                 const SizedBox(width: 8),
-                Text(isOn ? 'ON' : 'OFF', style: TextStyle(color: isOn ? AppColors.success : AppColors.gray, fontWeight: FontWeight.bold)),
+                Text(
+                  isOn ? 'ON' : 'OFF',
+                  style: TextStyle(color: isOn ? AppColors.success : AppColors.gray, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -450,10 +529,41 @@ class _VehicleInfoCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [_InfoItem(label: 'Distância', value: '${(device.totalDistance / 1000).toStringAsFixed(2)} km')],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _shareLocation,
+                    icon: const Icon(Icons.share_outlined, size: 18),
+                    label: const Text('Compartilhar'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: isTracingRoute ? null : (hasRoute ? onClearRoute : onTraceRoute),
+                    icon: isTracingRoute
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Icon(hasRoute ? Icons.close_rounded : Icons.directions_rounded, size: 18),
+                    label: Text(hasRoute ? 'Limpar rota' : 'Traçar rota'),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
+  }
+
+  void _shareLocation() {
+    final link = 'https://www.google.com/maps?q=${device.latitude},${device.longitude}';
+    SharePlus.instance.share(ShareParams(text: 'Localização de ${device.name}: $link'));
   }
 }
 

@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:app_tracking/app/services/directions_service.dart';
 import 'package:app_tracking/core/services/vehicle_motion_egine.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -15,6 +17,7 @@ class MapCustomController extends GetxController {
   final TraccarWebSocketService socketService;
   final MapTrackingConfig trackingConfig;
   final VehicleState vehicle;
+  final DirectionsService _directionsService = DirectionsService();
 
   MapCustomController(this.traccarService, this.socketService, this.trackingConfig, this.vehicle);
 
@@ -25,14 +28,17 @@ class MapCustomController extends GetxController {
   final devices = <DevicePosition>[].obs;
   final loading = false.obs;
 
-  /// Trilhas por device
-  final trails = <int, RxList<LatLng>>{}.obs;
+  /// Trilhas por device — lista de TRECHOS (cada trecho é uma sequência
+  /// contínua de pontos). Um hiato sem posição real (tela bloqueada, sem
+  /// sinal) fecha o trecho atual e abre um novo, em vez de ligar os dois
+  /// com uma linha reta cruzando o hiato.
+  final trails = <int, List<List<LatLng>>>{}.obs;
 
   /// Motion engines por device
   final Map<int, VehicleMotionEngine> _motionEngines = {};
 
   /// Stream subscriptions por device
-  final Map<int, StreamSubscription<LatLng>> _motionSubscriptions = {};
+  final Map<int, StreamSubscription<MotionUpdate>> _motionSubscriptions = {};
 
   int? _deviceId;
   List<int>? _deviceIds;
@@ -40,6 +46,13 @@ class MapCustomController extends GetxController {
   /// Nome exibido no balão de filtro (ex.: nome do cliente), quando o mapa
   /// está restrito aos devices de um usuário específico.
   final RxnString filterLabel = RxnString();
+
+  /// Rota traçada da localização do usuário até o device selecionado. Fica
+  /// parada (não recalcula) enquanto o veículo se move — a posição dele já
+  /// atualiza sozinha no mapa, não precisa retraçar.
+  final Rxn<List<LatLng>> routeToDevice = Rxn<List<LatLng>>();
+  final RxBool isTracingRoute = false.obs;
+  final RxnString routeError = RxnString();
 
   /// Callback para mover câmera
   Function(LatLng position)? onPositionUpdated;
@@ -95,21 +108,20 @@ class MapCustomController extends GetxController {
     try {
       final positions = await traccarService.getAllPositions();
 
-      final list =
-          positions.map<DevicePosition>((p) {
-            DeviceModel hasVehicle = vehicle.list.firstWhere((i) => i.id == p['deviceId']);
-            return DevicePosition(
-              id: p['deviceId'],
-              name: hasVehicle.name,
-              latitude: (p['latitude'] as num).toDouble(),
-              longitude: (p['longitude'] as num).toDouble(),
-              ignition: hasVehicle.attributes.ignition ?? p['attributes']?['ignition'] ?? p['attributes']?['motion'] ?? false,
-              totalDistance: (p['attributes']?['totalDistance'] ?? 0).toDouble(),
-              heading: (p['course'] ?? 0).toDouble(),
-              charge: hasVehicle.attributes.charge ?? p['attributes']?['charge'] as bool?,
-              blocked: hasVehicle.attributes.lockState.value ?? p['attributes']?['blocked'] as bool?,
-            );
-          }).toList();
+      final list = positions.map<DevicePosition>((p) {
+        DeviceModel hasVehicle = vehicle.list.firstWhere((i) => i.id == p['deviceId']);
+        return DevicePosition(
+          id: p['deviceId'],
+          name: hasVehicle.name,
+          latitude: (p['latitude'] as num).toDouble(),
+          longitude: (p['longitude'] as num).toDouble(),
+          ignition: hasVehicle.attributes.ignition ?? p['attributes']?['ignition'] ?? p['attributes']?['motion'] ?? false,
+          totalDistance: (p['attributes']?['totalDistance'] ?? 0).toDouble(),
+          heading: (p['course'] ?? 0).toDouble(),
+          charge: hasVehicle.attributes.charge ?? p['attributes']?['charge'] as bool?,
+          blocked: hasVehicle.attributes.lockState.value ?? p['attributes']?['blocked'] as bool?,
+        );
+      }).toList();
 
       if (_deviceIds != null && _deviceIds!.isNotEmpty) {
         devices.value = list.where((d) => _deviceIds!.contains(d.id)).toList();
@@ -121,7 +133,7 @@ class MapCustomController extends GetxController {
 
       // Inicializa trilhas e engines
       for (var d in devices) {
-        trails[d.id] = <LatLng>[].obs;
+        trails[d.id] = [<LatLng>[]];
         _initializeMotionEngine(d.id);
       }
     } finally {
@@ -193,23 +205,23 @@ class MapCustomController extends GetxController {
   void _initializeMotionEngine(int deviceId) {
     _motionEngines.putIfAbsent(deviceId, () => VehicleMotionEngine());
 
-    _motionSubscriptions[deviceId] = _motionEngines[deviceId]!.stream.listen((predictedPosition) {
+    _motionSubscriptions[deviceId] = _motionEngines[deviceId]!.stream.listen((update) {
       final index = devices.indexWhere((d) => d.id == deviceId);
 
       if (index == -1) return;
 
       final updated = devices[index].copyWith(
-        latitude: predictedPosition.latitude,
-        longitude: predictedPosition.longitude,
+        latitude: update.position.latitude,
+        longitude: update.position.longitude,
         heading: _lastHeading[deviceId] ?? devices[index].heading,
       );
 
       devices[index] = updated;
 
-      _updateTrail(deviceId, predictedPosition);
+      _updateTrail(deviceId, update.position, newSegment: update.startsNewSegment);
 
       if (devices.length == 1) {
-        onPositionUpdated?.call(predictedPosition);
+        onPositionUpdated?.call(update.position);
       }
     });
   }
@@ -218,30 +230,42 @@ class MapCustomController extends GetxController {
   // TRAIL MANAGEMENT
   // ===============================
 
-  void _updateTrail(int deviceId, LatLng point) {
+  void _updateTrail(int deviceId, LatLng point, {required bool newSegment}) {
     if (trackingConfig.isDisabled) return;
 
-    trails.putIfAbsent(deviceId, () => <LatLng>[].obs);
+    final segments = trails.putIfAbsent(deviceId, () => [<LatLng>[]]);
 
-    final trail = trails[deviceId]!;
-
-    trail.add(point);
-
-    if (trackingConfig.isInfinite) return;
-
-    if (trackingConfig.usePoints) {
-      while (trail.length > trackingConfig.value) {
-        trail.removeAt(0);
-      }
+    if (newSegment || segments.isEmpty) {
+      segments.add(<LatLng>[point]);
+    } else {
+      segments.last.add(point);
     }
 
-    if (trackingConfig.useTime) {
-      _applyTimeLimit(deviceId);
+    if (!trackingConfig.isInfinite && trackingConfig.usePoints) {
+      _trimByPoints(segments);
     }
+
+    trails.refresh();
   }
 
-  void _applyTimeLimit(int deviceId) {
-    // Futuramente implementar com timestamp real
+  /// Remove os pontos mais antigos (do trecho mais antigo) até caber no
+  /// limite configurado, descartando trechos que ficarem vazios.
+  void _trimByPoints(List<List<LatLng>> segments) {
+    var total = segments.fold<int>(0, (sum, s) => sum + s.length);
+
+    while (total > trackingConfig.value && segments.isNotEmpty) {
+      final oldest = segments.first;
+
+      if (oldest.isEmpty) {
+        segments.removeAt(0);
+        continue;
+      }
+
+      oldest.removeAt(0);
+      total--;
+
+      if (oldest.isEmpty) segments.removeAt(0);
+    }
   }
 
   // ===============================
@@ -272,20 +296,75 @@ class MapCustomController extends GetxController {
   }
 
   // ===============================
+  // ROTA ATÉ O DEVICE
+  // ===============================
+
+  /// Traça a rota rodoviária da localização atual do usuário até o device.
+  /// É uma "foto" única — não recalcula sozinha se o veículo se mover, já
+  /// que a posição dele no mapa já atualiza em tempo real por conta própria.
+  Future<void> traceRouteTo(DevicePosition device) async {
+    routeError.value = null;
+
+    try {
+      isTracingRoute.value = true;
+
+      final origin = await _getCurrentPosition();
+      if (origin == null) {
+        routeError.value = 'Não foi possível obter sua localização.';
+        return;
+      }
+
+      final route = await _directionsService.getRoute(
+        from: LatLng(origin.latitude, origin.longitude),
+        to: LatLng(device.latitude, device.longitude),
+      );
+
+      if (route == null) {
+        routeError.value = 'Não foi possível traçar a rota até o veículo.';
+        return;
+      }
+
+      routeToDevice.value = route;
+    } catch (e) {
+      routeError.value = 'Erro ao traçar rota: $e';
+    } finally {
+      isTracingRoute.value = false;
+    }
+  }
+
+  void clearRoute() {
+    routeToDevice.value = null;
+  }
+
+  Future<Position?> _getCurrentPosition() async {
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    return Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+  }
+
+  // ===============================
   // PUBLIC API
   // ===============================
 
-  List<LatLng> getTrail(int deviceId) {
-    return trails[deviceId]?.toList() ?? [];
+  List<List<LatLng>> getTrail(int deviceId) {
+    return trails[deviceId] ?? [];
   }
 
   void clearTrail(int deviceId) {
-    trails[deviceId]?.clear();
+    trails[deviceId] = [<LatLng>[]];
   }
 
   void clearAllTrails() {
-    for (var trail in trails.values) {
-      trail.clear();
+    for (final deviceId in trails.keys.toList()) {
+      trails[deviceId] = [<LatLng>[]];
     }
   }
 }

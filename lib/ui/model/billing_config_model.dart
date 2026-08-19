@@ -9,12 +9,18 @@ class BillingConfig {
   final double dailyInterestPercent;
   final String clientInfoMessage;
 
+  /// Dias de folga depois do vencimento antes do cliente ser bloqueado de
+  /// verdade (expirationTime no Traccar) — a data de vencimento em si
+  /// (cobrança/juros/mensagens) não muda, só o bloqueio atrasa.
+  final int toleranceDays;
+
   BillingConfig({
     required this.companyName,
     required this.pixKey,
     required this.pixKeyType,
     required this.pricePerDevice,
     this.dailyInterestPercent = 1.5,
+    this.toleranceDays = 10,
     String? clientInfoMessage,
   }) : clientInfoMessage = clientInfoMessage ?? defaultClientInfoMessage;
 
@@ -47,6 +53,7 @@ Seguimos à disposição.
     'pixKeyType': pixKeyType.name,
     'pricePerDevice': pricePerDevice,
     'dailyInterestPercent': dailyInterestPercent,
+    'toleranceDays': toleranceDays,
     'clientInfoMessage': clientInfoMessage,
   };
 
@@ -58,6 +65,8 @@ Seguimos à disposição.
       // Compat com configs salvas antes da mudança pra "por device".
       pricePerDevice: json['pricePerDevice']?.toDouble() ?? json['price']?.toDouble() ?? 0.0,
       dailyInterestPercent: json['dailyInterestPercent']?.toDouble() ?? 1.5,
+      // Compat com configs salvas antes da tolerância existir.
+      toleranceDays: json['toleranceDays'] ?? 10,
       clientInfoMessage: json['clientInfoMessage'] ?? defaultClientInfoMessage,
     );
   }

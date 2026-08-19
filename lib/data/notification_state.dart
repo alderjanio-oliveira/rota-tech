@@ -15,9 +15,6 @@ class NotificationState {
   final NoticationConfigService _service = NoticationConfigService();
 
   NotificationState() {
-    ever(isEnabled, (value) => print("Notification enabled: $value"));
-    ever(ignitionAlert, (value) => print("Ignition alert: $value"));
-    ever(chargeAlert, (value) => print("Charge alert: $value"));
     load();
     loadNotifications();
   }

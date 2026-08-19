@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
+import 'package:app_tracking/core/services/local_billing_config_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/core/utils/api.dart';
 import 'package:app_tracking/ui/models/daily_distance.dart';
@@ -14,6 +15,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class TraccarService extends GetxService {
   static TraccarService get to => Get.find();
   static UserSessionService get session => Get.find<UserSessionService>();
+  static BillingConfigService get billingConfig => Get.find<BillingConfigService>();
 
   final String baseUrl = dotenv.env['BASEURL']!;
   final String urlWs = dotenv.env['SOCKET_URL']!;
@@ -204,12 +206,11 @@ class TraccarService extends GetxService {
     }
 
     return dailyOdometers.entries.map((e) {
-        final values = e.value;
-        final km = values.isNotEmpty ? values.last - values.first : 0.0;
+      final values = e.value;
+      final km = values.isNotEmpty ? values.last - values.first : 0.0;
 
-        return DailyDistance(day: DateTime.parse(e.key), km: km);
-      }).toList()
-      ..sort((a, b) => a.day.compareTo(b.day));
+      return DailyDistance(day: DateTime.parse(e.key), km: km);
+    }).toList()..sort((a, b) => a.day.compareTo(b.day));
   }
 
   Future<List<Map<String, dynamic>>> getClients() async {
@@ -235,6 +236,7 @@ class TraccarService extends GetxService {
         'contractStart': attributes['contractStart'],
         'expiresAt': attributes['expiresAt'] ?? u['expirationTime'],
         'notified': attributes['notified'] ?? false,
+        'legacyToleranceAppliedAt': attributes['legacyToleranceAppliedAt'],
       };
     }).toList();
   }
@@ -283,7 +285,18 @@ class TraccarService extends GetxService {
     attributes['expiresAt'] = _formatDateOnly(newExpireDate);
     attributes['notified'] = false;
 
-    userData['expirationTime'] = DateTime.utc(newExpireDate.year, newExpireDate.month, newExpireDate.day, 23, 59, 59).toIso8601String();
+    // O vencimento (attributes.expiresAt, acima) não leva tolerância — só a
+    // data que o Traccar usa pra bloquear de verdade o login.
+    final toleranceDays = billingConfig.loadBillingConfig()?.toleranceDays ?? 10;
+    final blockDate = DateTime.utc(
+      newExpireDate.year,
+      newExpireDate.month,
+      newExpireDate.day,
+      23,
+      59,
+      59,
+    ).add(Duration(days: toleranceDays));
+    userData['expirationTime'] = blockDate.toIso8601String();
     userData['attributes'] = attributes;
 
     final response = await http.put(url, headers: _buildHeaders(), body: json.encode(userData));

@@ -39,7 +39,6 @@ class TraccarWebSocketService {
         _handleDrop(onError);
       },
       onDone: () {
-        print('🔌 Traccar WebSocket fechado');
         _handleDrop(onError);
       },
     );

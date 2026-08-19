@@ -112,7 +112,7 @@ class _MapWidgetState extends State<MapWidget> {
                   'https://api.mapbox.com/styles/v1/mapbox/${isDark ? "dark-v11" : "streets-v12"}/tiles/{z}/{x}/{y}{r}'
                   '?access_token=${dotenv.env['MAP_BOX_TOKEN']}',
               retinaMode: RetinaMode.isHighDensity(context),
-              userAgentPackageName: 'com.example.app_tracking',
+              userAgentPackageName: 'com.mobgotech.rotatec',
             ),
 
             /// TRILHAS — cada trecho (entre hiatos de sinal) é uma Polyline

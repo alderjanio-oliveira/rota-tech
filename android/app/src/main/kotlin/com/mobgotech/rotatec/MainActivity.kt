@@ -1,4 +1,4 @@
-package com.example.lock_master
+package com.mobgotech.rotatec
 
 import io.flutter.embedding.android.FlutterActivity
 

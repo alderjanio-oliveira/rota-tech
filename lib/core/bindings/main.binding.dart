@@ -3,6 +3,7 @@ import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/app/services/vehicle_services.dart';
 import 'package:app_tracking/core/services/api_helper.dart';
 import 'package:app_tracking/core/services/auth_service.dart';
+import 'package:app_tracking/core/services/local_billing_config_service.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/client_state.dart';
 import 'package:app_tracking/data/notification_state.dart';
@@ -36,6 +37,9 @@ class MainBinding implements Bindings {
     Get.lazyPut(() => AuthService(session: Get.find<UserSessionService>(), apiHelper: Get.find<ApiHelper>()), fenix: true);
 
     Get.lazyPut<TraccarService>(() => TraccarService());
+    // Precisa ficar disponível pro app inteiro (ClientAdminService/TraccarService
+    // leem toleranceDays daqui), não só quando o usuário abre a tela de Config.
+    Get.lazyPut(() => BillingConfigService());
     Get.lazyPut(() => AuthController(traccarService: Get.find<TraccarService>(), authService: Get.find<AuthService>()), fenix: true);
   }
 }

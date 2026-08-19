@@ -1,5 +1,6 @@
 // lib/ui/pages/home/home_page.dart
 import 'package:app_tracking/core/routes/app_routes.dart';
+import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/core/ui/drawer/app_drawer.dart';
 import 'package:app_tracking/core/ui/drawer/scaffold/app_scaffold.dart';
 import 'package:app_tracking/ui/controllers/auth_controller.dart';
@@ -36,6 +37,18 @@ class HomePage extends GetView<HomeController> {
         ],
       ),
       drawer: const AppDrawer(),
+      // Canto inferior ESQUERDO de propósito: no mapa os controles próprios
+      // (centralizar, seguir, trocar veículo) ficam ancorados à direita, e o
+      // FAB padrão do Flutter (direita) colidiria com eles.
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButton: Obx(() {
+        if (!Get.find<UserSessionService>().isAdmin.value) return const SizedBox.shrink();
+        return FloatingActionButton(
+          tooltip: 'Cadastrar dispositivo',
+          onPressed: () => Get.toNamed(Routes.DEVICE_CREATE),
+          child: const Icon(Icons.add),
+        );
+      }),
       body: Column(
         children: [
           Padding(

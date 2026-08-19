@@ -34,6 +34,17 @@ class AppDrawer extends StatelessWidget {
                 onTap: () => Get.toNamed(Routes.BILLING_CONFIG),
               );
             }),
+            Obx(() {
+              if (!session.isAdmin.value) return const SizedBox();
+
+              // TEMPORÁRIO: remover quando todos os clientes já existentes
+              // tiverem recebido a migração de tolerância.
+              return _drawerItem(
+                icon: Icons.timer_outlined,
+                title: 'Tolerância (temporário)',
+                onTap: () => Get.toNamed(Routes.LEGACY_TOLERANCE),
+              );
+            }),
             _drawerItem(icon: Icons.trip_origin, title: 'Kms rodados', onTap: () => Get.toNamed(Routes.TRIP_DETAILS)),
             _drawerItem(icon: Icons.notifications_outlined, title: 'Notificações', onTap: () => Get.toNamed(Routes.NOTIFICATIONS)),
             _drawerItem(icon: Icons.settings, title: 'Config. notificações', onTap: () => Get.toNamed(Routes.NOTIFICATION_CONFIG)),

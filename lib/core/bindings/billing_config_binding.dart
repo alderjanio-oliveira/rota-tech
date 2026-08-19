@@ -5,7 +5,8 @@ import 'package:get/get.dart';
 class BillingConfigBinding implements Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(() => BillingConfigService());
+    // BillingConfigService é registrado globalmente em MainBinding (outros
+    // services também leem toleranceDays de lá, não só esta tela).
     Get.lazyPut(() => BillingConfigController(service: Get.find<BillingConfigService>()));
   }
 }

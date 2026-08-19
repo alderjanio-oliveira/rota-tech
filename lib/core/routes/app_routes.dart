@@ -11,4 +11,7 @@ abstract class Routes {
   static const NOTIFICATIONS = '/notifications';
   static const NOTIFICATION_CONFIG = '/notification/config';
   static const CLIENTS_DETAILS = '/admin/clients/details';
+  static const CLIENTS_CREATE = '/admin/clients/create';
+  static const LEGACY_TOLERANCE = '/admin/clients/legacy-tolerance';
+  static const DEVICE_CREATE = '/admin/devices/create';
 }

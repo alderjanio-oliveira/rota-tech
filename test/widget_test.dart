@@ -1,30 +1,12 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+// Smoke test placeholder. O teste de contador do template do Flutter foi
+// removido — não representa nada deste app (que não tem contador, e o
+// widget raiz MyApp depende de inicialização assíncrona feita em main(),
+// como dotenv/GetStorage/DI, que um WidgetTester não configura sozinho).
+// Nenhum teste de widget real foi escrito ainda pra RotaTec.
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:lock_master/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('placeholder', () {
+    expect(1 + 1, 2);
   });
 }

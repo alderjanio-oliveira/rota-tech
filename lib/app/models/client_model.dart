@@ -10,6 +10,10 @@ class ClientModel {
   final String? email;
   List<DeviceModel>? devices;
 
+  /// Quando a migração temporária de tolerância (+N dias no bloqueio) foi
+  /// aplicada a este cliente — null = ainda não recebeu.
+  final DateTime? legacyToleranceAppliedAt;
+
   ClientModel({
     required this.id,
     required this.name,
@@ -19,6 +23,7 @@ class ClientModel {
     required this.notified,
     this.email,
     this.devices,
+    this.legacyToleranceAppliedAt,
   });
 
   factory ClientModel.fromMap(Map<String, dynamic> map) {
@@ -30,6 +35,7 @@ class ClientModel {
       contractStart: _parseBillingDate(map['contractStart']),
       expiresAt: _parseBillingDate(map['expiresAt']),
       notified: map['notified'] ?? false,
+      legacyToleranceAppliedAt: _parseBillingDate(map['legacyToleranceAppliedAt']),
     );
   }
 
@@ -41,6 +47,7 @@ class ClientModel {
     bool? notified,
     String? email,
     List<DeviceModel>? devices,
+    DateTime? legacyToleranceAppliedAt,
   }) {
     return ClientModel(
       id: id,
@@ -51,6 +58,7 @@ class ClientModel {
       notified: notified ?? this.notified,
       email: email ?? this.email,
       devices: devices ?? this.devices,
+      legacyToleranceAppliedAt: legacyToleranceAppliedAt ?? this.legacyToleranceAppliedAt,
     );
   }
 

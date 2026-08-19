@@ -13,6 +13,12 @@ class ClientsAdminPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Clientes')),
 
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.person_add_alt_1),
+        label: const Text('Cadastrar'),
+        onPressed: () => Get.toNamed(Routes.CLIENTS_CREATE),
+      ),
+
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -25,22 +31,21 @@ class ClientsAdminPage extends StatelessWidget {
         /// 🔥 FILTROS LOCAIS (simples e eficiente)
         final search = controller.search.value.toLowerCase();
 
-        final filtered =
-            controller.clients.list.where((c) {
-              final matchSearch = c.name.toLowerCase().contains(search);
+        final filtered = controller.clients.list.where((c) {
+          final matchSearch = c.name.toLowerCase().contains(search);
 
-              if (controller.filter.value == 'todos') return matchSearch;
+          if (controller.filter.value == 'todos') return matchSearch;
 
-              if (controller.filter.value == 'vencidos') {
-                return matchSearch && c.daysToExpire < 0;
-              }
+          if (controller.filter.value == 'vencidos') {
+            return matchSearch && c.daysToExpire < 0;
+          }
 
-              if (controller.filter.value == 'ativos') {
-                return matchSearch && c.daysToExpire >= 0;
-              }
+          if (controller.filter.value == 'ativos') {
+            return matchSearch && c.daysToExpire >= 0;
+          }
 
-              return true;
-            }).toList();
+          return true;
+        }).toList();
 
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -146,7 +151,10 @@ class _KpiBox extends StatelessWidget {
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: color.withOpacity(0.1)),
       child: Column(
         children: [
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color)),
+          Text(
+            value,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color),
+          ),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(fontSize: 12)),
         ],
@@ -208,7 +216,12 @@ class _ClientCard extends StatelessWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
-              child: Center(child: Text(days == 0 ? 'Hoje' : days.toString(), style: TextStyle(color: color, fontWeight: FontWeight.bold))),
+              child: Center(
+                child: Text(
+                  days == 0 ? 'Hoje' : days.toString(),
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
 
             const SizedBox(width: 12),

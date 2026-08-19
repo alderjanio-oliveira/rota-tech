@@ -8,6 +8,13 @@ class DeviceModel {
   final int? lastPositionId;
   final RxBool loading = false.obs;
 
+  /// IMEI (identificador que o rastreador usa pra se conectar no Traccar).
+  final String? uniqueId;
+
+  /// Número do chip/SIM instalado no rastreador — usado pra mandar os
+  /// comandos de configuração por SMS.
+  final String? phone;
+
   /// Indica se já sabemos a posição/última leitura do device (usado para
   /// trocar o skeleton pelo card real na listagem), independente do device
   /// ter ou não uma posição de fato disponível no servidor.
@@ -19,6 +26,8 @@ class DeviceModel {
     required this.status,
     required this.attributes,
     this.lastPositionId,
+    this.uniqueId,
+    this.phone,
     this.positionLoaded = false,
   });
 
@@ -29,6 +38,8 @@ class DeviceModel {
       status: json['status'],
       attributes: DeviceAttributes.fromJson(json['attributes'] ?? {}),
       lastPositionId: json['lastPositionId'],
+      uniqueId: json['uniqueId'],
+      phone: json['phone'],
     );
   }
 
@@ -39,6 +50,8 @@ class DeviceModel {
       status: status,
       attributes: attributes ?? this.attributes,
       lastPositionId: lastPositionId ?? this.lastPositionId,
+      uniqueId: uniqueId,
+      phone: phone,
       positionLoaded: positionLoaded ?? this.positionLoaded,
     );
   }

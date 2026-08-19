@@ -3,6 +3,7 @@ import 'package:app_tracking/core/routes/app_routes.dart';
 import 'package:app_tracking/core/services/user_session_service.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/distance_reminder_model.dart';
+import 'package:app_tracking/data/tracker_sms_command.dart';
 import 'package:app_tracking/ui/controllers/vehicles/vehicles_detail_controller.dart';
 import 'package:app_tracking/ui/molecules/modal/modal_generic_molecule.dart';
 import 'package:app_tracking/ui/pages/vehicle/widgets/data_filter.dart';
@@ -50,6 +51,12 @@ class VehicleDetailsPage extends GetView<VehicleDetailsController> {
 
           /// 📊 KPIs (SEM QUEBRAR)
           _KpiSection(controller: controller),
+
+          const SizedBox(height: 16),
+
+          /// 📡 COMANDOS SMS — configuração do rastreador (APN, servidor,
+          /// etc.), enviados direto pro chip.
+          _SmsCommandsSection(controller: controller),
 
           const SizedBox(height: 24),
 
@@ -383,6 +390,122 @@ class _ReminderHistoryItem extends StatelessWidget {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month/${date.year}';
+  }
+}
+
+/// Comandos de configuração do rastreador, enviados por SMS pro chip.
+/// Só pro admin (operador da frota) — um cliente vendo os detalhes do
+/// próprio veículo não pode reconfigurar o rastreador dele.
+/// Fechado por padrão pra não poluir a tela — só quem precisa reconfigurar
+/// (recém-cadastrado ou depois de um reset) abre.
+class _SmsCommandsSection extends StatelessWidget {
+  final VehicleDetailsController controller;
+
+  const _SmsCommandsSection({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Get.find<UserSessionService>().isAdmin.value) return const SizedBox.shrink();
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Theme.of(context).cardColor),
+        child: ExpansionTile(
+          title: const Text('Comandos de configuração (SMS)', style: TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text(
+            controller.liveDevice.phone?.isNotEmpty == true
+                ? 'Enviados pro chip ${controller.liveDevice.phone}'
+                : 'Dispositivo sem número de chip cadastrado',
+            style: const TextStyle(fontSize: 12),
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          children: controller.commands.map((command) => _CommandCard(command: command, controller: controller)).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _CommandCard extends StatelessWidget {
+  final SmsCommandTemplate command;
+  final VehicleDetailsController controller;
+
+  const _CommandCard({required this.command, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: Theme.of(context).scaffoldBackgroundColor,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(command.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              if (command.required)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                  child: const Text(
+                    'Obrigatório',
+                    style: TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(command.description, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          if (command.params.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: command.params.map((param) {
+                return SizedBox(
+                  width: 150,
+                  child: TextField(
+                    controller: controller.paramControllers['${command.label}.${param.key}'],
+                    decoration: InputDecoration(labelText: param.label, isDense: true),
+                    onChanged: (_) => controller.refreshPreview(command),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Obx(
+            () => Text(
+              controller.previewByCommand[command.label]?.value ?? '',
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => controller.copyCommand(command),
+                icon: const Icon(Icons.copy_outlined, size: 16),
+                label: const Text('Copiar'),
+              ),
+              const SizedBox(width: 4),
+              FilledButton.icon(
+                onPressed: () => controller.sendBySms(command),
+                icon: const Icon(Icons.sms_outlined, size: 16),
+                label: const Text('Enviar por SMS'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

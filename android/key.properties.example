@@ -1,0 +1,14 @@
+# Copie este arquivo pra "android/key.properties" (esse sim ignorado pelo
+# git) e preencha com os dados reais da sua chave de release.
+#
+# Gerar a chave (uma vez só, guarde o arquivo .keystore e as senhas com MUITO
+# cuidado — perder isso significa não poder mais atualizar o app publicado,
+# só publicar como um app novo do zero):
+#
+#   keytool -genkey -v -keystore ~/rotatec-release.keystore -alias rotatec \
+#     -keyalg RSA -keysize 2048 -validity 10000
+
+storePassword=SENHA_DO_KEYSTORE
+keyPassword=SENHA_DA_CHAVE
+keyAlias=rotatec
+storeFile=/caminho/completo/para/rotatec-release.keystore

@@ -12,11 +12,6 @@ class VehicleState {
     required this.vehicleServices,
   });
 
-  onInit() {
-    ever(list, (_) => print("Devices updated: ${list.length} devices"));
-    ever(positions, (_) => print("Positions updated: ${positions.length} positions"));
-  }
-
   /// Carrega devices, posição e endereço em sequência. Para telas que
   /// queiram exibir os cards antes (skeleton) chame [loadDevices] e
   /// [loadPositionsAndAddresses] separadamente, como o HomeController faz.

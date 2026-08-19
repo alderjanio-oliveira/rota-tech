@@ -2,10 +2,13 @@ import 'package:app_tracking/app/models/client_model.dart';
 import 'package:app_tracking/app/services/traccar_service.dart';
 import 'package:app_tracking/data/device_model.dart';
 import 'package:app_tracking/data/distance_reminder_model.dart';
+import 'package:app_tracking/data/tracker_sms_command.dart';
 import 'package:app_tracking/data/vehicle_state.dart';
 import 'package:app_tracking/ui/models/daily_distance.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class VehicleDetailsController extends GetxController {
   final TraccarService traccarService;
@@ -68,14 +71,76 @@ class VehicleDetailsController extends GetxController {
 
   final Rxn<String> reminderError = Rxn<String>();
 
+  // ===============================
+  // COMANDOS SMS (configuração do rastreador)
+  // ===============================
+
+  /// Só J16 por enquanto — [commandsFor] já está pronto pra outros modelos
+  /// quando precisar.
+  final List<SmsCommandTemplate> commands = commandsFor(TrackerModel.j16);
+
+  /// Um TextEditingController por parâmetro de cada comando, já preenchido
+  /// com o valor default — chave é "labelDoComando.chaveDoParametro".
+  final Map<String, TextEditingController> paramControllers = {};
+
+  /// Texto final de cada comando, num RxString — TextEditingController
+  /// sozinho não notifica Obx, então cada campo dispara a atualização daqui
+  /// no onChanged.
+  final Map<String, RxString> previewByCommand = {};
+
   @override
   void onInit() {
     super.onInit();
+
+    for (final command in commands) {
+      for (final param in command.params) {
+        paramControllers['${command.label}.${param.key}'] = TextEditingController(text: param.defaultValue);
+      }
+      previewByCommand[command.label] = buildCommand(command).obs;
+    }
 
     // Sem busca automática de período: o usuário escolhe as datas e aperta o
     // filtro. Evita travar a entrada na tela com uma consulta pesada.
     _loadLinkedClient();
     _loadActiveReminder();
+  }
+
+  @override
+  void onClose() {
+    for (final controller in paramControllers.values) {
+      controller.dispose();
+    }
+    super.onClose();
+  }
+
+  void refreshPreview(SmsCommandTemplate command) {
+    previewByCommand[command.label]?.value = buildCommand(command);
+  }
+
+  String buildCommand(SmsCommandTemplate command) {
+    final values = <String, String>{
+      for (final param in command.params) param.key: paramControllers['${command.label}.${param.key}']?.text ?? param.defaultValue,
+    };
+    return command.build(values);
+  }
+
+  Future<void> sendBySms(SmsCommandTemplate command) async {
+    final phone = liveDevice.phone ?? '';
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      Get.snackbar('Telefone não encontrado', 'Este dispositivo não tem número de chip cadastrado.');
+      return;
+    }
+
+    final uri = Uri(scheme: 'sms', path: digits, queryParameters: {'body': buildCommand(command)});
+    if (!await launchUrl(uri)) {
+      Get.snackbar('Erro', 'Não foi possível abrir o app de mensagens.');
+    }
+  }
+
+  void copyCommand(SmsCommandTemplate command) {
+    Clipboard.setData(ClipboardData(text: buildCommand(command)));
+    Get.snackbar('Copiado', 'Comando copiado pra área de transferência.');
   }
 
   Future<void> _loadLinkedClient() async {

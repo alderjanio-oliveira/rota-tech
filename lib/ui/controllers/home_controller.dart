@@ -91,7 +91,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   // =======================
 
   void _connectSocket() {
-    socketService.connect(onData: _onSocketData, onError: (e) => print('WS erro: $e'));
+    socketService.connect(onData: _onSocketData);
   }
 
   void _onSocketData(Map<String, dynamic> data) {

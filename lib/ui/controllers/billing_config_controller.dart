@@ -13,6 +13,7 @@ class BillingConfigController extends GetxController {
   final pixKeyType = PixKeyType.cpf.obs;
   final pricePerDevice = 0.0.obs;
   final dailyInterestPercent = 1.5.obs;
+  final toleranceDays = 10.obs;
   final clientInfoMessageController = TextEditingController();
 
   @override
@@ -25,6 +26,7 @@ class BillingConfigController extends GetxController {
       pixKeyType.value = config.pixKeyType;
       pricePerDevice.value = config.pricePerDevice;
       dailyInterestPercent.value = config.dailyInterestPercent;
+      toleranceDays.value = config.toleranceDays;
       clientInfoMessageController.text = config.clientInfoMessage;
     } else {
       clientInfoMessageController.text = BillingConfig.defaultClientInfoMessage;
@@ -45,6 +47,7 @@ class BillingConfigController extends GetxController {
         pixKeyType: pixKeyType.value,
         pricePerDevice: pricePerDevice.value,
         dailyInterestPercent: dailyInterestPercent.value,
+        toleranceDays: toleranceDays.value,
         clientInfoMessage: clientInfoMessageController.text,
       ),
     );

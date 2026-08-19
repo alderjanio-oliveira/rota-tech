@@ -1,5 +1,5 @@
 name: app_tracking
-description: "A new Flutter project."
+description: "RotaTec — rastreamento veicular, mensalidades e gestão de clientes/dispositivos."
 publish_to: 'none'
 version: 0.1.0
 
@@ -27,11 +27,13 @@ dependencies:
   flutter_dotenv: ^6.0.0
   share_plus: ^11.0.0
   geolocator: ^14.0.2
+  mobile_scanner: ^7.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true

@@ -58,9 +58,6 @@ class ClientsAdminController extends GetxController {
           client.devices!.add(device);
         }
       }
-      print(clients.list);
-
-      // Processar os dados conforme necessário
     } catch (e) {
       error.value = 'Erro ao carregar dispositivos por usuário';
     } finally {

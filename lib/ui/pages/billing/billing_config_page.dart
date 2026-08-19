@@ -48,6 +48,16 @@ class BillingConfigPage extends GetView<BillingConfigController> {
             onChanged: (v) => controller.dailyInterestPercent.value = double.tryParse(v.replaceAll(',', '.')) ?? 1.5,
             controller: TextEditingController(text: controller.dailyInterestPercent.value.toString()),
           ),
+          const SizedBox(height: 12),
+          TextField(
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Tolerância antes de bloquear (dias)',
+              helperText: 'O vencimento continua igual — o cliente só é bloqueado de verdade esses dias depois.',
+            ),
+            onChanged: (v) => controller.toleranceDays.value = int.tryParse(v) ?? 10,
+            controller: TextEditingController(text: controller.toleranceDays.value.toString()),
+          ),
           const SizedBox(height: 20),
           Row(
             children: [
